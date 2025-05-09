@@ -1,0 +1,25 @@
+@import url("https://fonts.googleapis.com/css2?family=Carlito:ital,wght@0,400;0,700;1,400;1,700&display=swap");
+
+.carlito-regular {
+  font-family: "Carlito", sans-serif;
+  font-weight: 400;
+  font-style: normal;
+}
+
+.carlito-bold {
+  font-family: "Carlito", sans-serif;
+  font-weight: 700;
+  font-style: normal;
+}
+
+.carlito-regular-italic {
+  font-family: "Carlito", sans-serif;
+  font-weight: 400;
+  font-style: italic;
+}
+
+.carlito-bold-italic {
+  font-family: "Carlito", sans-serif;
+  font-weight: 700;
+  font-style: italic;
+}

@@ -2,7 +2,7 @@ import os
 from fastapi import FastAPI, HTTPException, Depends
 from fastapi.security import OAuth2PasswordBearer, OAuth2PasswordRequestForm
 from passlib.context import CryptContext
-from jose import JWTError, jwt
+import jwt
 from datetime import datetime, timedelta
 import sqlalchemy.orm as orm
 import models
@@ -39,8 +39,8 @@ async def get_user (db: orm.Session(), username: str):
 
 async def create_user(db: orm.Session(), user: schemas.UserCreate):
         user_obj = models.User(
+            realname = user.realname,
             username=user.username,
-            realname=user.realname,
             password_hash=get_password_hash(user.password)
         )
         db.add(user_obj)
@@ -50,7 +50,7 @@ async def create_user(db: orm.Session(), user: schemas.UserCreate):
 
 async def authenticate_user(db: orm.Session, username: str, password: str):
     user = await get_user(db, username)
-    if (not user) or (not verify_password(password, user.hashed_password)):
+    if (not user) or (not verify_password(password, user.password_hash)):
         return False
     return user
 
