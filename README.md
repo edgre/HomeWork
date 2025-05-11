@@ -18,3 +18,4 @@
 > `npm run dev`
 
 # Про Backend
+1. Из корня проекта выполнить команду: `pip install -r requirements.txt`
