@@ -17,18 +17,26 @@ class User(db.Base):
 
 
 class GDZ(db.Base):
-    __tablename__ = 'posts'
+    __tablename__ = 'gdz'
 
     id = sql.Column(sql.Integer, primary_key=True, index=True)
     owner_id = sql.Column(sql.String(
         50), sql.ForeignKey("users.username"))
     description = sql.Column(sql.String(250), nullable=False)
-    textbook_and_exercise = sql.Column(sql.String(250), nullable=False)
-    category = sql.Column(sql.String(250), nullable=False)
-    grade =  sql.Column(sql.String(250), nullable=False)
-    content = sql.Column(sql.String(10000), nullable=False)
+    textbook = sql.Column(sql.String(250), nullable=False)
+    exercise =sql.Column(sql.String(25), nullable=False)
+    subject = sql.Column(sql.String(250), nullable=False)
+    category =  sql.Column(sql.String(250), nullable=False)
+    content = sql.Column(sql.String(100), nullable=False)
+    content_text = sql.Column(sql.String(1000), nullable=False)
     rating = sql.Column(sql.Integer, default=0)
-    is_elite = sql.Column(sql.Boolean, default=0)
+    is_elite = sql.Column(sql.Boolean, default=False, nullable=False)
 
     user = orm.relationship("User", back_populates="GDZ")
+
+class Purchase(db.Base):
+    __tablename__ = 'purchases'
+    id = sql.Column(sql.Integer, primary_key=True)
+    buyer_id = sql.Column(sql.Integer, sql.ForeignKey('users.id'))
+    gdz_id = sql.Column(sql.Integer, sql.ForeignKey('posts.id'))
 
