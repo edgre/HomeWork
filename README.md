@@ -21,5 +21,7 @@
 1. Установить необходимые зависимости
    1. Выполнить: `pip install -r requirements.txt`
 
-## Запустить Uvicorn-сервер
+## Запустить Uvicorn-сервер 
+> Из директории backend выполнить
+> 
 > `uvicorn main:app --reload`
