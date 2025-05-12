@@ -21,10 +21,12 @@ ACCESS_TOKEN_EXPIRE_MINUTES = 30
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/token")
 
+
 async def add_to_db(db: orm.Session(), class_obj):
     db.add(class_obj)
     db.commit()
     db.refresh(class_obj)
+
 
 def get_db():
     db = _db.Session()
@@ -33,11 +35,13 @@ def get_db():
     finally:
         db.close()
 
+
 def get_password_hash(password):
     return pwd_context.hash(password)
 
-async def get_user (db: orm.Session(), username: str):
-   return db.query(models.User).filter(models.User.username == username).first()
+
+async def get_user(db: orm.Session(), username: str):
+    return db.query(models.User).filter(models.User.username == username).first()
 
 
 async def authenticate_user(db: orm.Session, username: str, password: str):
@@ -45,6 +49,7 @@ async def authenticate_user(db: orm.Session, username: str, password: str):
     if (not user) or (not verify_password(password, user.password_hash)):
         return False
     return user
+
 
 async def get_current_user(
     db: orm.Session = Depends(get_db),
@@ -55,27 +60,30 @@ async def get_current_user(
         print(payload)
         user = db.query(models.User).get(payload["id"])
     except:
-        raise HTTPException(
-            status_code=401, detail="Invalid JWT token")
+        raise HTTPException(status_code=401, detail="Invalid JWT token")
     return schemas.UserInDB.from_orm(user)
+
 
 async def verify_password(plain_password, hashed_password):
     return pwd_context.verify(plain_password, hashed_password)
 
 
-async def create_access_token(user: models.User, expires_delta: timedelta | None = None):
+async def create_access_token(
+    user: models.User, expires_delta: timedelta | None = None
+):
     user_obj = schemas.UserInDB.from_orm(user)
     expire = datetime.utcnow() + (expires_delta or timedelta(minutes=15))
     payload = user_obj.dict()
     payload["exp"] = expire
-    token = jwt.encode(payload, SECRET_KEY)
+    token = jwt.encode(payload, SECRET_KEYz)
     return {"access_token": token}
+
 
 async def create_user(db: orm.Session(), user: schemas.UserCreate):
     user_obj = models.User(
         realname=user.realname,
         username=user.username,
-        password_hash=get_password_hash(user.password)
+        password_hash=get_password_hash(user.password),
     )
     db.add(user_obj)
     db.commit()
@@ -84,10 +92,7 @@ async def create_user(db: orm.Session(), user: schemas.UserCreate):
 
 
 async def create_gdz(
-        db: orm.Session,
-        gdz_data: schemas.GDZBase,
-        file_content: UploadFile,
-        owner_id: str
+    db: orm.Session, gdz_data: schemas.GDZBase, file_content: UploadFile, owner_id: str
 ):
     # Создаем папку media если ее нет
 
@@ -127,14 +132,15 @@ async def create_gdz(
     except Exception as e:
         raise HTTPException(500, detail=f"Ошибка при сохранении: {str(e)}")
 
+
 async def get_gdz_by_id(db: orm.Session, gdz_id: int):
     return db.query(models.GDZ).filter(models.GDZ.id == gdz_id).first()
+
 
 async def get_all_gdz_sorted_by_rating(db: orm.Session, descending: bool = True):
     order = models.GDZ.rating.desc() if descending else models.GDZ.rating.asc()
     return db.query(models.GDZ).order_by(order).all()
 
+
 async def get_gdz_by_owner(db: orm.Session, user_id: int):
     return db.query(models.GDZ).filter(models.GDZ.id == user_id).all()
-
-

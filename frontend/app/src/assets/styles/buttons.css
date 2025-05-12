@@ -1,87 +1,90 @@
 .button {
-  padding: 10px 20px;
+  background-color: var(--clr-accent);
+  height: 36px;
+  padding-top: auto;
+  padding-bottom: auto;
+  padding-left: 18px;
+  padding-right: 18px;
+  gap: 10px;
+  align-items: center;
   font-size: 16px;
-  background-color: var(--clr-surface-a10);
-  color: var(--clr-dark-a0);
+  border-radius: 8px;
   border: none;
-  border-radius: 10px;
+  font-weight: 600;
   cursor: pointer;
-  font-family: "Carlito", sans-serif;
-  font-weight: 400;
 }
 
 .button:hover,
 .button:hover::before {
-  background-color: var(--clr-surface-tonal-a10);
+  background-color: var(--clr-accent-hover);
+  transition-duration: var(--transition-duration);
 }
 
-.buttonGreen {
-  padding: 10px 20px;
+.buttonWhite {
+  background-color: var(--clr-light);
+  height: 32px;
+  padding-top: auto;
+  padding-bottom: auto;
+  padding-left: 18px;
+  padding-right: 18px;
   font-size: 16px;
-  background-color: var(--clr-primary-a10);
-  color: var(--clr-dark-a0);
-  border: none;
-  border-radius: 10px;
+  border-radius: 8px;
+  border: 1px solid var(--clr-dark);
+  font-weight: 600;
   cursor: pointer;
-  font-family: "Carlito", sans-serif;
-  font-weight: 400;
-  box-shadow: 2px 2px 10px var(--clr-surface-a40);
+  transition: ease;
 }
 
-.buttonGreen {
-  padding: 10px 20px;
+.buttonWhite:hover,
+.buttonWhite:hover::before {
+  background-color: var(--clr-dark);
+  color: var(--clr-light);
+  transition-duration: var(--transition-duration);
+}
+
+.buttonGrey {
+  display: inline-flex;
+  background-color: var(--clr-grey-1);
+  height: 36px;
+  padding-top: auto;
+  padding-bottom: auto;
+  padding-left: 18px;
+  padding-right: 18px;
+  align-items: center;
   font-size: 16px;
-  background-color: var(--clr-primary-a10);
-  color: var(--clr-dark-a0);
+  border-radius: 8px;
   border: none;
-  border-radius: 10px;
+  font-weight: 600;
   cursor: pointer;
-  font-family: "Carlito", sans-serif;
-  font-weight: 400;
-  box-shadow: 2px 2px 10px var(--clr-surface-a40);
+  transition: ease;
 }
 
-.buttonLightGreen {
-  display: inline;
-  padding: 10px 20px;
-  font-size: 16px;
-  background-color: var(--clr-primary-a30);
-  color: var(--clr-dark-a0);
+.buttonGrey img {
+  width: 20px;
+  height: 20px;
+  margin-right: 10px; /* Отступ между иконкой и текстом */
+}
+
+.buttonGrey:hover,
+.buttonGrey:hover::before {
+  background-color: var(--clr-grey-2);
+  transition-duration: var(--transition-duration);
+}
+
+.icon-button {
+  display: inline-flex;
+  background: none;
   border: none;
-  border-radius: 10px;
+  border-radius: 2px;
   cursor: pointer;
-  font-family: "Carlito", sans-serif;
-  font-weight: 800;
-  transition: padding 0.3s ease;
-  margin-right: auto;
+  padding: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 64px;
 }
 
-.buttonLightGreen:hover,
-.buttonLightGreen:hover::before {
-  background-color: var(--clr-primary-a40);
-}
-
-.buttonBlack {
-  padding: 10px 20px;
-  font-size: 16px;
-  background-color: var(--clr-surface-a10);
-  color: var(--clr-primary-a30);
-  border: 1.5px solid var(--clr-surface-a30);
-  border-radius: 10px;
-  cursor: pointer;
-  font-family: "Carlito", sans-serif;
-  font-weight: 800;
-  transition: background-color 0.3s ease;
-}
-
-.buttonBlack:hover,
-.buttonBlack:hover::before {
-  background-color: var(--clr-surface-a30);
-}
-
-.buttonBlack:disabled {
-  background-color: transparent;
-  cursor: default;
-  color: transparent;
-  border: none;
+.icon-button:hover,
+.icon-button:hover::before {
+  transition-duration: var(--transition-duration);
 }

@@ -1,5 +1,5 @@
 .auth-page-container {
-  display: flex;
+  display: absolute;
   justify-content: center;
   align-items: center;
   height: 100vh;
@@ -10,12 +10,12 @@
   padding-bottom: 40px;
   padding-right: 60px;
   padding-left: 60px;
-  max-width: 600px;
+  max-width: 480px;
   align-items: center;
   align-content: center;
   margin: 0 auto;
-  background-color: var(--clr-surface-a10);
-  border-radius: 30px;
+  background-color: var(--clr-light);
+  border-radius: 12px;
 }
 
 .auth-error-container {
@@ -25,7 +25,8 @@
   margin: 10px;
   border-radius: 30px;
   align-items: center;
-  background-color: var(--red);
+  color: var(--clr-light);
+  background-color: rgb(45, 45, 45);
 }
 
 .auth-page-title {
@@ -36,6 +37,7 @@
 
 .auth-form {
   display: flex;
+  align-items: center;
   flex-direction: column;
 }
 
@@ -50,14 +52,6 @@
   font-weight: 500;
   color: #323232;
   margin-bottom: 4px;
-}
-
-.form-input {
-  width: 100%;
-  padding: 8px 12px;
-  font-size: 16px;
-  border: 1px solid #000000;
-  border-radius: 4px;
 }
 
 .auth-button {
@@ -77,6 +71,7 @@
 .switch {
   position: relative;
   display: inline-block;
+  font-family: "Inter", sans-serif;
   height: 46px;
   width: 240px;
   margin: 8px;
@@ -95,7 +90,8 @@
   left: 0;
   right: 0;
   bottom: 0;
-  background-color: var(--clr-surface-a20);
+  gap: auto;
+  background-color: var(--clr-grey-1);
   -webkit-transition: 0.4s;
   transition: 0.4s;
   border-radius: 10px;
@@ -108,7 +104,7 @@
   width: 115px;
   left: 5px;
   bottom: 4px;
-  background-color: var(--clr-surface-a30);
+  background-color: var(--clr-grey-2);
   -webkit-transition: 0.4s;
   transition: 0.4s;
   border-radius: 8px;
@@ -119,22 +115,22 @@
 .text-off,
 .text-on {
   position: absolute;
-  font-size: 15px;
+  font-size: 14px;
   font-weight: 400;
   text-align: center;
-  width: 64px;
+  /* width: 100px; */
   margin-top: 12px;
 }
 
 .text-off {
   left: 0;
-  padding-left: 28px;
+  padding-left: 42px;
   color: var(--clr-dark-a0);
 }
 
 .text-on {
   right: 0;
-  padding-right: 38px;
+  padding-right: 18px;
   color: var(--clr-dark-a0);
 }
 
@@ -151,20 +147,20 @@ input:checked + .slider:before {
 
 .inputBox {
   padding: 10px 20px;
-  font-size: 16px;
-  background-color: var(--clr-surface-a10);
-  color: var(--clr-primary-a30);
-  border: 1.5px solid var(--clr-surface-a30);
+  font-size: 14px;
+  background-color: var(--clr-grey-1);
+  color: var(--clr-dark);
   border-radius: 10px;
-  width: 196px;
+  border: none;
+  width: 240px;
   cursor: pointer;
-  font-family: "Carlito", sans-serif;
+  font-family: "Inter", sans-serif;
   font-weight: 400;
-
   transition: background-color 0.3s ease;
 }
 
 .inputBox:hover,
 .inputBox:hover::before {
-  background-color: var(--clr-surface-tonal-a20);
+  background-color: var(--clr-grey-0);
+  border-color: var(--clr-accent-hover);
 }

@@ -15,13 +15,17 @@
 
 ## Запустить dev-сервер
 
-> `npm run dev`
+> `npm run dev` (в папке frontend/app)
 
 # Про Backend
+
 1. Установить необходимые зависимости
    1. Выполнить: `pip install -r requirements.txt`
 
-## Запустить Uvicorn-сервер 
+## Запустить Uvicorn-сервер
+
 > Из директории backend выполнить
-> 
-> `uvicorn main:app --reload`
+>
+> 1. `pip install uvicorn fastapi`
+> 2. `pip install python-multipart`
+> 3. Запуск: `uvicorn main:app --reload`
