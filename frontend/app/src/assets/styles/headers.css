@@ -1,0 +1,27 @@
+.headerTop {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  column-gap: 32px;
+  min-height: 96px;
+  padding-inline: min(15.625vw, 300px);
+  background-color: var(--clr-light);
+}
+
+.headerButtom {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  column-gap: 32px;
+  min-height: 68px;
+  padding-inline: 32px;
+  background-color: var(--clr-light);
+}
+
+.header-menu {
+  display: flex;
+  align-items: center;
+  column-gap: 32px;
+  font-size: 16;
+  font-weight: 700;
+}

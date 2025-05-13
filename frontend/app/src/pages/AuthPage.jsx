@@ -1,6 +1,7 @@
 import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
 
+import LogoVertical from "../assets/images/Logo-vertical.svg";
 // CSS импорты
 import "../assets/styles/font.css";
 import "../assets/styles/buttons.css";
@@ -25,9 +26,9 @@ const AuthPage = () => {
       const response = await fetch(`api/token`, {
         method: "POST",
         headers: {
-          "Content-Type": "application/x-www-form-urlencoded"
+          "Content-Type": "application/x-www-form-urlencoded",
         },
-        body: formData.toString() // Правильный формат для x-www-form-urlencoded
+        body: formData.toString(), // Правильный формат для x-www-form-urlencoded
       });
 
       if (!response.ok) {
@@ -49,13 +50,13 @@ const AuthPage = () => {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
-          "Accept": "application/json"
+          Accept: "application/json",
         },
         body: JSON.stringify({
           username: username,
           password: password,
-          realname: realname
-        })
+          realname: realname,
+        }),
       });
 
       if (!response.ok) {
@@ -106,77 +107,105 @@ const AuthPage = () => {
 
   return (
     <div className="container">
-      <div className="auth-form-container">
-        <div className="h1" style={{ verticalAlign: "center", justifyContent: "center" }}>
-          Добро пожаловать
-        </div>
-        <div className="h4" style={{ marginTop: "5px" }}>
-          Пожалуйста пройди аутентификацию
+      <div
+        style={{
+          display: "flex",
+          flexDirection: "column",
+          alignItems: "center",
+        }}
+      >
+        <div style={{ margin: "32px" }}>
+          <img
+            src={LogoVertical}
+            width="400"
+            height="170"
+            alt="Домашка Плюс"
+            loading="lazy"
+          />
         </div>
 
-        <form className="auth-form" onSubmit={handleAuth}>
-          <div className="form-group" style={{ padding: "0px" }}>
-            <label className="switch">
-              <input
-                type="checkbox"
-                checked={isRegistering}
-                onChange={() => setIsRegistering(!isRegistering)}
-              />
-              <span className="slider">
-                <span className="text-off">Войти</span>
-                <span className="text-on">Регистрация</span>
-              </span>
-            </label>
+        <div className="auth-form-container">
+          <div
+            className="h1"
+            style={{ verticalAlign: "center", justifyContent: "center" }}
+          >
+            Добрый день
           </div>
-          {isRegistering && (
+          <div
+            className="h2"
+            style={{
+              marginTop: "5px",
+              verticalAlign: "center",
+              justifyContent: "center",
+            }}
+          >
+            Пожалуйста авторизуйтесь
+          </div>
+
+          <form className="auth-form" onSubmit={handleAuth}>
+            <div className="form-group" style={{ padding: "0px" }}>
+              <label className="switch">
+                <input
+                  type="checkbox"
+                  checked={isRegistering}
+                  onChange={() => setIsRegistering(!isRegistering)}
+                />
+                <span className="slider">
+                  <span className="text-off">Вход</span>
+                  <span className="text-on">Регистрация</span>
+                </span>
+              </label>
+            </div>
+            {isRegistering && (
+              <div className="form-group">
+                <input
+                  type="text"
+                  id="realname"
+                  className="inputBox"
+                  placeholder="Никнейм"
+                  value={realname}
+                  onChange={(e) => setRealname(e.target.value)}
+                  required={isRegistering}
+                />
+              </div>
+            )}
+
+            {/* Поле username (используется для входа) */}
             <div className="form-group">
               <input
                 type="text"
-                id="realname"
+                id="username"
                 className="inputBox"
-                placeholder="Никнейм"
-                value={realname}
-                onChange={(e) => setRealname(e.target.value)}
-                required={isRegistering}
+                placeholder="Логин"
+                value={username}
+                onChange={(e) => setUsername(e.target.value)}
+                required
               />
             </div>
-          )}
 
-          {/* Поле username (используется для входа) */}
-          <div className="form-group">
-            <input
-              type="text"
-              id="username"
-              className="inputBox"
-              placeholder="Логин"
-              value={username}
-              onChange={(e) => setUsername(e.target.value)}
-              required
-            />
-          </div>
+            <div className="form-group">
+              <input
+                type="password"
+                id="password"
+                className="inputBox"
+                placeholder="Пароль"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                required
+              />
+            </div>
 
-          <div className="form-group">
-            <input
-              type="password"
-              id="password"
-              className="inputBox"
-              placeholder="Пароль"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              required
-            />
-          </div>
-
-          <div className="form-group">
-            <button
-              type="submit"
-              className="buttonGreen"
-              style={{ marginTop: "0px" }}
-            >
-              {isRegistering ? "Зарегистрироваться" : "Войти"}
-            </button>
-          </div>
-        </form>
+            <div className="form-group">
+              <button
+                type="submit"
+                className="button"
+                style={{ marginTop: "0px" }}
+              >
+                {isRegistering ? "Зарегистрироваться" : "Войти"}
+              </button>
+            </div>
+          </form>
+        </div>
       </div>
       {error && (
         <div className="auth-error-container">

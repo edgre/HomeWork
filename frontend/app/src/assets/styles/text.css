@@ -1,22 +1,23 @@
 .h1 {
   display: flex;
-  font-size: 28px;
-  font-family: "Carlito", sans-serif;
+  font-size: 36px;
+  font-family: "Montserrat", sans-serif;
   font-weight: 700;
-  color: var(--clr-dark-a0);
+  color: var(--clr-dark);
 }
 
 .h2 {
-  font-size: 18px;
-  font-family: "Carlito", sans-serif;
-  font-weight: 700;
-  color: var(--clr-light-a0);
+  display: flex;
+  font-size: 20px;
+  font-family: "Montserrat", sans-serif;
+  font-weight: regular;
+  color: var(--clr-dark);
 }
 
 .h2-green {
   font-size: 18px;
   font-family: "Carlito", sans-serif;
-  font-weight: 700;
+  font-weight: 00;
   color: var(--clr-primary-a0);
 }
 

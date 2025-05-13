@@ -1,0 +1,95 @@
+.grid {
+  display: flex-grid;
+  grid-template-rows: auto 1fr;
+  height: 100%;
+  gap: 0;
+  align-items: center;
+  overflow: hidden;
+  height: auto;
+  /* width: 1344px; */
+  padding-inline: min(15.625vw, 300px);
+}
+
+.row-complete {
+  display: display;
+  gap: 0;
+  align-items: center;
+  padding-top: 18px;
+  padding-bottom: 18px;
+}
+
+.row-header {
+  display: flex;
+  align-items: center;
+  background: none;
+  gap: 24px;
+  padding-top: 18px;
+  padding-bottom: 18px;
+  padding-left: 36px;
+  padding-right: 36px;
+  font-family: "Montserrat", sans-serif;
+  font-weight: 700;
+  font-size: 20px;
+}
+
+.row-cards {
+  width: 100%;
+  overflow-x: auto;
+  max-width: calc(100vw - (2 * min(15.625vw, 300px)));
+  display: flex;
+  flex-direction: row;
+  overflow-x: scroll;
+  overflow-y: hidden;
+  white-space: nowrap;
+  padding-bottom: 2px;
+  gap: 32px;
+  padding-left: 0;
+  scroll-padding-left: 0;
+  scroll-snap-type: x mandatory;
+  scrollbar-color: var(--clr-accent-hover);
+  user-select: none;
+  scroll-behavior: smooth;
+  overscroll-behavior-x: contain; /* Предотвращение bounce-эффекта */
+  scrollbar-width: none; /* Тонкий скроллбар для Firefox */
+  -webkit-overflow-scrolling: touch; /* Плавная прокрутка на мобильных */
+}
+
+.row-cards::-webkit-scrollbar {
+  display: none; /*Chrome, Safari, Opera */
+  height: 1px;
+  background-color: transparent;
+}
+
+.card {
+  flex-shrink: 0;
+  display: inline-flex;
+  align-items: center;
+  text-align: center;
+  vertical-align: center;
+  width: min(auto, 240px);
+  height: 64px;
+  padding: 24px;
+  background-color: var(--clr-light);
+  border: none;
+  border-radius: 12px;
+  font-family: "Montserrat", sans-serif;
+  font-weight: 700;
+  font-size: 20px;
+  cursor: pointer;
+  scroll-snap-align: start;
+  flex: 0 0 auto;
+  box-shadow: 0px 0px 2px 1px rgba(0, 0, 0, 0.05);
+}
+
+.card img {
+  width: 24px;
+  height: 24px;
+  margin-right: 10px; /* Отступ между иконкой и текстом */
+}
+
+.card:hover,
+.card:hover::before {
+  /* background-color: var(--clr-accent-hover); */
+  transition-duration: var(--transition-duration);
+  scale: 95%;
+}
