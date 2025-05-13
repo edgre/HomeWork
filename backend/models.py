@@ -11,6 +11,7 @@ class User(db.Base):
     password_hash = sql.Column(sql.String, nullable=False)
 
     GDZ = orm.relationship("GDZ", back_populates="user")
+    purchases = orm.relationship("Purchase", back_populates="buyer")
 
     def verify_password(self, password: str):
         return hash.bcrypt.verify(password, self.password_hash)
@@ -27,6 +28,7 @@ class GDZ(db.Base):
     exercise =sql.Column(sql.String(25), nullable=False)
     subject = sql.Column(sql.String(250), nullable=False)
     category =  sql.Column(sql.String(250), nullable=False)
+    price = sql.Column(sql.Integer)
     content = sql.Column(sql.String(100), nullable=False)
     content_text = sql.Column(sql.String(1000), nullable=False)
     rating = sql.Column(sql.Integer, default=0)
@@ -34,9 +36,38 @@ class GDZ(db.Base):
 
     user = orm.relationship("User", back_populates="GDZ")
 
+
 class Purchase(db.Base):
     __tablename__ = 'purchases'
-    id = sql.Column(sql.Integer, primary_key=True)
+    id = sql.Column(sql.Integer, primary_key=True, index=True)
     buyer_id = sql.Column(sql.Integer, sql.ForeignKey('users.id'))
-    gdz_id = sql.Column(sql.Integer, sql.ForeignKey('posts.id'))
+    gdz_id = sql.Column(sql.Integer, sql.ForeignKey('gdz.id'))  # Исправлено с posts.id на gdz.id
 
+    # Связи
+    buyer = orm.relationship("User", back_populates="purchases")
+    gdz = orm.relationship("GDZ")
+
+class GDZRating(db.Base):
+    __tablename__ = 'gdz_ratings'
+    __table_args__ = (
+        sql.Index('ix_gdz_rating_gdz_id', 'gdz_id'),  # Индекс для поиска по gdz_id
+    )
+    id = sql.Column(sql.Integer, primary_key=True, index=True)
+    gdz_id = sql.Column(sql.Integer, sql.ForeignKey('gdz.id'))
+    user_id = sql.Column(sql.Integer, sql.ForeignKey('users.id'))
+    value = sql.Column(sql.Float, nullable=False)
+
+    # Связи
+    gdz = orm.relationship("GDZ")
+    user = orm.relationship("User")
+
+
+class Codes(db.Base):
+    __tablename__ = 'codes'
+    id = sql.Column(sql.Integer, primary_key=True, index=True)
+    gdz_id = sql.Column(sql.Integer, sql.ForeignKey('gdz.id'))
+    user_id = sql.Column(sql.Integer, sql.ForeignKey('users.id'))
+    code = sql.Column(sql.String(100), nullable=False)
+
+    user = orm.relationship("User")
+    gdz = orm.relationship("GDZ")

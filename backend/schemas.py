@@ -22,25 +22,34 @@ class Token(BaseModel):
     access_token: str
     token_type: str
 
-class GDZBase(BaseModel):
-        """Базовая схема для GDZ (без файлового контента)"""
+class GDZCreate(BaseModel):
         description: str
         textbook: str
         exercise: str
         subject: str
         category: str
-        rating: int
+        price: int
+        rating: float = 0.0
         is_elite: bool = False
+        content_text: str
 
         model_config = ConfigDict(from_attributes=True)
 
-class GDZPublic(GDZBase):
+class GDZPublic(BaseModel):
     id: int
-    owner_id: str
-    rating: int = 0
+    owner_id: int
+    description: str
+    textbook: str
+    exercise: str
+    subject: str
+    price: int
+    category: str
+    rating: float
+    is_elite: bool
 
 class GDZPrivate(GDZPublic):
-    content_file: str
+    content: str
 
-
-
+class GDZRatingIn(BaseModel):
+    gdz_id: int
+    value: int  # от 1 до 5

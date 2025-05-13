@@ -97,7 +97,7 @@ const AuthPage = () => {
       if (isRegistering) {
         await handleRegister();
       } else {
-        await handleusername();
+        await handleUsername();
       }
     } catch (err) {
       setError(err.message || "Произошла ошибка. Попробуйте снова.");
