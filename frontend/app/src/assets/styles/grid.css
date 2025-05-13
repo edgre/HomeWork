@@ -111,9 +111,26 @@
 .taskText {
   display: flex;
   align-items: center;
-
+  max-width: 100%; /* Не будет превышать ширину родителя */
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
   background: none;
   margin: 0;
   gap: 12px;
   height: auto;
+  cursor: default;
+}
+
+.taskTag {
+  height: 36px;
+  align-content: center;
+  border-radius: 8px;
+  padding-left: 18px;
+  padding-right: 18px;
+  padding-top: auto;
+  padding-bottom: auto;
+  color: var(--clr-light);
+  background-color: var(--clr-bouns);
+  cursor: default;
 }

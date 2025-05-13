@@ -64,8 +64,17 @@ const CategoryPage = () => {
           <h2 className="category-type-badge">{category.type}</h2>
         </div>
 
-        <HomeWorkPanel />
-        <HomeWorkPanel />
+        <HomeWorkPanel
+          number={"1"}
+          taskText={"Решить систему уравнений"}
+          tag={"New"}
+        />
+        <HomeWorkPanel
+          number={"2"}
+          taskText={
+            "Методом гаусса найти определитель матрицы альфа и бетта и гамма"
+          }
+        />
       </div>
     </div>
   );

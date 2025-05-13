@@ -23,3 +23,51 @@ h2.bold {
   color: var(--clr-dark);
   margin: 0;
 }
+
+h2.truncated-text {
+  position: relative; /* Для корректного позиционирования тултипа */
+  overflow: visible; /* Отключаем обрезание */
+}
+
+/* Стили для обрезанного текста */
+.truncated-text {
+  display: inline-block;
+  max-width: 100%;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  position: relative;
+  cursor: default;
+}
+
+/* Стили для кастомного тултипа */
+.custom-tooltip {
+  position: absolute;
+  bottom: 100%;
+  left: 50%;
+  transform: translateX(-50%);
+  background: var(--clr-grey-2);
+  color: var(--clr-dark);
+  padding: 8px 12px;
+  border-radius: 6px;
+  font-size: 14px;
+  z-index: 1000;
+  min-width: 200px;
+  max-width: 300px;
+  white-space: normal;
+  word-break: break-word;
+}
+
+/* Анимация появления */
+.custom-tooltip {
+  animation: fadeIn 0.2s ease-out;
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
