@@ -1,11 +1,9 @@
-import React from "react";
-import LogoHorizontal from "../../assets/images/Logo-horizontal.svg";
 import "../../assets/styles/headers.css";
 import { Link } from "react-router-dom";
 
-const HeaderTop = () => {
+const HeaderButtom1 = () => {
   return (
-    <header className="headerTop">
+    <header className="headerButtom">
       <div className="header-menu">
         <div>
           {
@@ -13,11 +11,11 @@ const HeaderTop = () => {
           }
         </div>
       </div>
-      <Link to="/">
+      <Link to="/home">
         <button className="button">Опубликовать</button>
       </Link>
     </header>
   );
 };
 
-export default HeaderTop;
+export default HeaderButtom1;

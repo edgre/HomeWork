@@ -75,7 +75,7 @@ async def create_access_token(
     expire = datetime.utcnow() + (expires_delta or timedelta(minutes=15))
     payload = user_obj.dict()
     payload["exp"] = expire
-    token = jwt.encode(payload, SECRET_KEYz)
+    token = jwt.encode(payload, SECRET_KEY)
     return {"access_token": token}
 
 

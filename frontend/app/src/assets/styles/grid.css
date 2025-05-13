@@ -14,8 +14,8 @@
   display: display;
   gap: 0;
   align-items: center;
-  padding-top: 18px;
-  padding-bottom: 18px;
+  padding-top: 0;
+  padding-bottom: 24px;
 }
 
 .row-header {
@@ -23,10 +23,10 @@
   align-items: center;
   background: none;
   gap: 24px;
-  padding-top: 18px;
-  padding-bottom: 18px;
+  padding-top: 12px;
+  padding-bottom: 12px;
   padding-left: 36px;
-  padding-right: 36px;
+  /* padding-right: 36px; */
   font-family: "Montserrat", sans-serif;
   font-weight: 700;
   font-size: 20px;
@@ -92,4 +92,28 @@
   /* background-color: var(--clr-accent-hover); */
   transition-duration: var(--transition-duration);
   scale: 95%;
+}
+
+.hwPanel {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  column-gap: 12px;
+  background-color: var(--clr-light);
+  padding-top: 18px;
+  padding-bottom: 18px;
+  border-radius: 12px;
+  padding: 22px;
+  margin-top: 18px;
+  gap: auto;
+}
+
+.taskText {
+  display: flex;
+  align-items: center;
+
+  background: none;
+  margin: 0;
+  gap: 12px;
+  height: auto;
 }

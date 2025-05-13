@@ -4,8 +4,8 @@ const NotFoundPage = () => {
   return (
     <div>
       <h1> {"Not Found Page :("}</h1>
-      <Link to={"/"}>
-        <button className="button">Home</button>
+      <Link to={"/home"}>
+        <button className="button">На главную</button>
       </Link>
     </div>
   );

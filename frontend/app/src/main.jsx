@@ -4,7 +4,8 @@ import { createBrowserRouter, RouterProvider } from "react-router-dom";
 import "../src/assets/styles/index.css";
 import App from "./App.jsx";
 import AuthPage from "./pages/AuthPage.jsx";
-import HomePage from "./pages/Homepage.jsx";
+import HomePage from "./pages/HomePage.jsx";
+import CategoryPage from "./pages/CategoryPage.jsx";
 import ProfilePage from "./pages/ProfilePage.jsx";
 import NotFoundPage from "./pages/Notfoundpage.jsx";
 
@@ -16,6 +17,10 @@ const router = createBrowserRouter([
   {
     path: "/home",
     element: <HomePage />,
+  },
+  {
+    path: "/category/:slug",
+    element: <CategoryPage />,
   },
   {
     path: "/me",
