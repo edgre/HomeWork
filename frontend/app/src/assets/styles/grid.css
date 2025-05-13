@@ -111,14 +111,15 @@
 .taskText {
   display: flex;
   align-items: center;
-  max-width: 100%; /* Не будет превышать ширину родителя */
   white-space: nowrap;
-  overflow: hidden;
   text-overflow: ellipsis;
+  white-space: nowrap;
   background: none;
   margin: 0;
   gap: 12px;
   height: auto;
+  width: auto;
+  /* overflow: hidden; */
   cursor: default;
 }
 

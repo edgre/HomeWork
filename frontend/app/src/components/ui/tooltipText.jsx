@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useRef, useEffect } from "react";
 import "../../assets/styles/text.css";
 
 const TooltipText = ({ text, maxLength, as: Tag = "span" }) => {
@@ -7,6 +7,18 @@ const TooltipText = ({ text, maxLength, as: Tag = "span" }) => {
 
   const truncatedText =
     text.length > maxLength ? `${text.substring(0, maxLength)}...` : text;
+
+  const tooltipRef = useRef(null);
+
+  useEffect(() => {
+    if (isVisible && tooltipRef.current) {
+      const rect = tooltipRef.current.getBoundingClientRect();
+      if (rect.right > window.innerWidth) {
+        tooltipRef.current.style.left = "auto";
+        tooltipRef.current.style.right = "0";
+      }
+    }
+  }, [isVisible]);
 
   return (
     <Tag // Используем переданный тег (по умолчанию 'span')
