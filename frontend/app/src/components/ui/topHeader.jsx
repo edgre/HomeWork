@@ -4,7 +4,7 @@ import LogoProfile from "../../assets/images/User.svg";
 import "../../assets/styles/headers.css";
 import { Link } from "react-router-dom";
 
-const HeaderTop = () => {
+const HeaderTop = ({ username }) => {
   return (
     <header className="headerTop">
       <div className="">
@@ -20,7 +20,8 @@ const HeaderTop = () => {
         </Link>
       </div>
       <nav className="header-menu">
-        <Link>
+        <h3>{username}</h3>
+        <Link to="/me">
           <img
             className="icon-button"
             src={LogoProfile}

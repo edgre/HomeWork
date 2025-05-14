@@ -1,6 +1,5 @@
 import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
-
 import LogoVertical from "../assets/images/Logo-vertical.svg";
 // CSS импорты
 import "../assets/styles/font.css";
@@ -125,14 +124,13 @@ const AuthPage = () => {
         </div>
 
         <div className="auth-form-container">
-          <div
+          <h1
             className="h1"
             style={{ verticalAlign: "center", justifyContent: "center" }}
           >
             Добрый день
-          </div>
-          <div
-            className="h2"
+          </h1>
+          <h2
             style={{
               marginTop: "5px",
               verticalAlign: "center",
@@ -140,7 +138,7 @@ const AuthPage = () => {
             }}
           >
             Пожалуйста авторизуйтесь
-          </div>
+          </h2>
 
           <form className="auth-form" onSubmit={handleAuth}>
             <div className="form-group" style={{ padding: "0px" }}>
@@ -199,7 +197,7 @@ const AuthPage = () => {
               <button
                 type="submit"
                 className="button"
-                style={{ marginTop: "0px" }}
+                style={{ marginTop: "8px" }}
               >
                 {isRegistering ? "Зарегистрироваться" : "Войти"}
               </button>

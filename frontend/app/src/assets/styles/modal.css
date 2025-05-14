@@ -1,0 +1,33 @@
+.modal {
+  height: 100vh;
+  width: 100vw;
+  background-color: rgba(0, 0, 0, 0.65);
+  position: fixed;
+  z-index: 1000;
+  top: 0;
+  left: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  opacity: 0;
+  pointer-events: none;
+  transition: var(--transition-duration) ease;
+}
+
+.modal.active {
+  opacity: 1;
+  pointer-events: all;
+}
+
+.modal-container {
+  background-color: var(--clr-light);
+  position: fixed;
+  border-radius: 12px;
+  padding: 16px;
+  transform: scale(0.7);
+  transition: var(--transition-duration) all;
+}
+
+.modal-container.active {
+  transform: scale(1);
+}

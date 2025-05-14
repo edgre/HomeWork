@@ -1,19 +1,24 @@
+import { useState } from "react";
 import "../../assets/styles/headers.css";
-import { Link } from "react-router-dom";
+import Modal from "./modal";
 
 const HeaderButtom1 = () => {
+  const [modalActive, setModalActive] = useState(false);
   return (
     <header className="headerButtom">
+      <Modal active={modalActive} setActive={setModalActive}>
+        <h2>Привет</h2>
+      </Modal>
       <div className="header-menu">
-        <div>
+        <h3>
           {
-            "Выбери категорию своего домашнего задания или опубликуй свои работы, чтобы заработать на свою мечту"
+            "Выбери категорию своего домашнего задания или опубликуй свои работы"
           }
-        </div>
+        </h3>
       </div>
-      <Link to="/home">
-        <button className="button">Опубликовать</button>
-      </Link>
+      <button className="button" onClick={() => setModalActive(true)}>
+        Опубликовать
+      </button>
     </header>
   );
 };

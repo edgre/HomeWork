@@ -6,6 +6,9 @@
 }
 
 .auth-form-container {
+  display: grid;
+  flex-direction: column;
+  text-align: left;
   padding-top: 40px;
   padding-bottom: 40px;
   padding-right: 60px;
@@ -16,8 +19,10 @@
   margin: 0 auto;
   background-color: var(--clr-light);
   border-radius: 12px;
+  /* column-gap: 12px; */
+  row-gap: 12px;
 }
-
+/* style={{ columnGapgap: "12px", rowGap: "12px" }} */
 .auth-error-container {
   position: relative;
   display: flex;
@@ -73,7 +78,7 @@
   display: inline-block;
   font-family: "Inter", sans-serif;
   height: 46px;
-  width: 240px;
+  width: 280px;
   margin: 8px;
 }
 
@@ -101,7 +106,7 @@
   position: absolute;
   content: "";
   height: 38px;
-  width: 115px;
+  width: 136px;
   left: 5px;
   bottom: 4px;
   background-color: var(--clr-grey-2);
@@ -124,18 +129,18 @@
 
 .text-off {
   left: 0;
-  padding-left: 42px;
+  padding-left: 54px;
   color: var(--clr-dark-a0);
 }
 
 .text-on {
   right: 0;
-  padding-right: 18px;
+  padding-right: 26px;
   color: var(--clr-dark-a0);
 }
 
 input:checked + .slider:before {
-  --shift: 114px;
+  --shift: 135px;
   -webkit-transform: translateX(var(--shift));
   -ms-transform: translateX(var(--shift));
   transform: translateX(var(--shift));

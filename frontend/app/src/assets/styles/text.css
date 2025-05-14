@@ -4,6 +4,8 @@ h1 {
   font-family: "Montserrat", sans-serif;
   font-weight: 700;
   color: var(--clr-dark);
+  margin: 0;
+  cursor: default;
 }
 
 h2 {
@@ -13,6 +15,7 @@ h2 {
   font-weight: 400;
   color: var(--clr-dark);
   margin: 0;
+  cursor: default;
 }
 
 h2.bold {
@@ -27,6 +30,42 @@ h2.bold {
 h2.truncated-text {
   position: relative; /* Для корректного позиционирования тултипа */
   overflow: visible; /* Отключаем обрезание */
+}
+
+h3 {
+  display: flex;
+  font-size: 16px;
+  font-family: "Montserrat", sans-serif;
+  font-weight: 400;
+  color: var(--clr-dark-half);
+  margin: 0;
+}
+
+h3.bold {
+  display: flex;
+  font-size: 16px;
+  font-family: "Montserrat", sans-serif;
+  font-weight: 700;
+  color: var(--clr-dark-half);
+  margin: 0;
+}
+
+h4 {
+  display: flex;
+  font-size: 16px;
+  font-family: "Inter", sans-serif;
+  font-weight: 400;
+  color: var(--clr-dark-half);
+  margin: 0;
+}
+
+h4.semibold {
+  display: flex;
+  font-size: 16px;
+  font-family: "Inter", sans-serif;
+  font-weight: 600;
+  color: var(--clr-dark-half);
+  margin: 0;
 }
 
 /* Стили для обрезанного текста */
@@ -51,7 +90,7 @@ h2.truncated-text {
   padding: 8px 12px;
   border-radius: 6px;
   font-size: 14px;
-  z-index: 1000;
+  z-index: 999;
   min-width: 200px;
   max-width: 300px;
   white-space: normal;
