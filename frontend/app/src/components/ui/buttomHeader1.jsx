@@ -1,14 +1,16 @@
 import { useState } from "react";
+import { Link } from "react-router-dom";
 import "../../assets/styles/headers.css";
 import Modal from "./modal";
+import HomeworkCreate from "./hwCreate";
 
 const HeaderButtom1 = () => {
   const [modalActive, setModalActive] = useState(false);
   return (
     <header className="headerButtom">
-      <Modal active={modalActive} setActive={setModalActive}>
-        <h2>Привет</h2>
-      </Modal>
+      {/* <Modal active={modalActive} setActive={setModalActive}>
+        <HomeworkCreate />
+      </Modal> */}
       <div className="header-menu">
         <h3>
           {
@@ -16,9 +18,11 @@ const HeaderButtom1 = () => {
           }
         </h3>
       </div>
-      <button className="button" onClick={() => setModalActive(true)}>
-        Опубликовать
-      </button>
+      <Link to="/create">
+        <button className="button" onClick={() => setModalActive(true)}>
+          Опубликовать
+        </button>
+      </Link>
     </header>
   );
 };

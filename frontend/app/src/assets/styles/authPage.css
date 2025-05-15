@@ -152,7 +152,7 @@ input:checked + .slider:before {
 
 .inputBox {
   padding: 10px 20px;
-  font-size: 14px;
+  font-size: 16px;
   background-color: var(--clr-grey-1);
   color: var(--clr-dark);
   border-radius: 10px;

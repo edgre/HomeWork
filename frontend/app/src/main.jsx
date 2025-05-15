@@ -8,6 +8,8 @@ import HomePage from "./pages/HomePage.jsx";
 import CategoryPage from "./pages/CategoryPage.jsx";
 import ProfilePage from "./pages/ProfilePage.jsx";
 import NotFoundPage from "./pages/Notfoundpage.jsx";
+import TaskPage from "./pages/TaskPage.jsx";
+import TaskCreatePage from "./pages/TaskCreatePage.jsx";
 
 const router = createBrowserRouter([
   {
@@ -23,8 +25,16 @@ const router = createBrowserRouter([
     element: <CategoryPage />,
   },
   {
+    path: "/category/:slug/:taskid",
+    element: <TaskPage />,
+  },
+  {
     path: "/me",
     element: <ProfilePage />,
+  },
+  {
+    path: "/create",
+    element: <TaskCreatePage />,
   },
   {
     path: "*",

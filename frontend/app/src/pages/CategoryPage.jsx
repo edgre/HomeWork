@@ -21,7 +21,7 @@ const categoryData = {
 };
 
 const categoryData2 = {
-  // Лабораторные работы
+  // ВУЗ Лабораторные работы
   "lab-programming": {
     title: "Программирование",
     type: "laboratoryWorks",
@@ -48,7 +48,7 @@ const categoryData2 = {
     categoryName: "Лабораторные работы",
   },
 
-  // Научные работы
+  // ВУЗ Научные работы
   coursework: {
     title: "Курсовая работа",
     type: "researchWorks",
@@ -139,6 +139,10 @@ const CategoryPage = () => {
   const { slug } = useParams(); // Берём айди страницы
   const navigate = useNavigate();
   const category = categoryData2[slug];
+
+  const handleCardClick = (slug, hwid) => {
+    navigate(`/category/${slug}/${hwid}`);
+  };
 
   // В CategoryPage.jsx
   const [content, setContent] = useState(null);
