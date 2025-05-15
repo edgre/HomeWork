@@ -14,6 +14,7 @@ const PreviewHomework = ({
   taskTextFull,
   photoUrl = defaultPhoto,
   altText = "Фотография",
+  flagToNotSetRating = 0,
 }) => {
   const [userRating, setUserRating] = useState(0);
   const [isLoading, setIsLoading] = useState(true);
@@ -52,10 +53,13 @@ const PreviewHomework = ({
       </div>
       <h2 className="bold">Ответ</h2>
       <h4>Какой-то ответ</h4>
-      <RatingInput
-        label="Оцените работу пользователя"
-        onRatingChange={handleRatingChange}
-      />
+      {flagToNotSetRating === 0 && (
+        <RatingInput
+          label="Оцените работу пользователя"
+          onRatingChange={handleRatingChange}
+        />
+      )}
+
       <div
         style={{
           display: "flex",

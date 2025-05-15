@@ -12,7 +12,10 @@ const HomeWorkPanel = ({ subject, taskText }) => {
     <div className="hwPanel">
       <Modal active={modalActive} setActive={setModalActive}>
         {/* <h1>Просмотр своего дз</h1> */}
-        <PreviewHomework taskTextFull="Найти решение системы уравнений через китайскую теорему об остатках. Вывести ФСР." />
+        <PreviewHomework
+          taskTextFull="Найти решение системы уравнений через китайскую теорему об остатках. Вывести ФСР."
+          flagToNotSetRating="yes"
+        />
       </Modal>
       <div className="taskText">
         <h2 className="bold">{subject}</h2>

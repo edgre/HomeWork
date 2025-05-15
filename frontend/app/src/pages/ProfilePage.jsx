@@ -12,7 +12,7 @@ const ProfilePage = () => {
       <HeaderButtom2 />
 
       <div className="grid">
-        <ProfileCard username={"Gleb"} />
+        <ProfileCard username={"Gleb"} rating={"4.9"} />
         <HomeWorkPanel
           subject={"Алгебра"}
           taskText={"Решить систему уравнений"}

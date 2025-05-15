@@ -1,6 +1,6 @@
 import LabelWithIcon from "./iconTextLabel";
 import Star from "../../assets/images/Star.svg";
-const ProfileCard = ({ username }) => {
+const ProfileCard = ({ username, rating = "N/A" }) => {
   return (
     <div className="hwPanel">
       <div className="category-left-box">
@@ -8,7 +8,7 @@ const ProfileCard = ({ username }) => {
         {/* <h2>login</h2> */}
         <h3>description</h3>
         <LabelWithIcon icon={Star} className="ratingLabel">
-          4.3
+          {rating}
         </LabelWithIcon>
       </div>
       <button className="button">Мои ответы</button>
