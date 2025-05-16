@@ -16,6 +16,13 @@ class User(db.Base):
     def verify_password(self, password: str):
         return hash.bcrypt.verify(password, self.password_hash)
 
+class Subjects(db.Base):
+    __tablename__ = 'subjects'
+
+    subject_name = sql.Column(sql.Integer, primary_key=True, index=True)
+    category = sql.Column(sql.String(100), nullable=False)
+    paths = sql.Column(sql.String(100), nullable=False)
+
 
 class GDZ(db.Base):
     __tablename__ = 'gdz'
@@ -23,10 +30,8 @@ class GDZ(db.Base):
     id = sql.Column(sql.Integer, primary_key=True, index=True)
     owner_id = sql.Column(sql.String(
         50), sql.ForeignKey("users.username"))
-    description = sql.Column(sql.String(250), nullable=False)
-    textbook = sql.Column(sql.String(250), nullable=False)
-    exercise =sql.Column(sql.String(25), nullable=False)
-    subject = sql.Column(sql.String(250), nullable=False)
+    description = sql.Column(sql.String(100), nullable=False)
+    full_description = sql.Column(sql.String(250), nullable=False)
     category =  sql.Column(sql.String(250), nullable=False)
     price = sql.Column(sql.Integer)
     content = sql.Column(sql.String(100), nullable=False)

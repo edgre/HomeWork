@@ -69,11 +69,8 @@ async def create_access_token(user: models.User, expires_delta: timedelta | None
     expire = datetime.utcnow() + (expires_delta or timedelta(minutes=15))
     payload = user_obj.dict()
     payload["exp"] = expire
-<<<<<<< HEAD
     token = jwt.encode(payload, SECRET_KEY)
-=======
     token = jwt.encode(payload, SECRET_KEY, algorithm="HS256")
->>>>>>> 040297c0b8cfb4cef5a4672870ba7b66afc5313a
     return {"access_token": token}
 
 async def create_user(db: orm.Session(), user: schemas.UserCreate):
@@ -115,9 +112,7 @@ async def create_gdz(
         # Создаем запись в БД
         gdz = models.GDZ(
             description=gdz_data.description,
-            textbook=gdz_data.textbook,
-            exercise=gdz_data.exercise,
-            subject=gdz_data.subject,
+            full_description =  gdz_data.full_descripton,
             category=gdz_data.category,
             is_elite=gdz_data.is_elite,
             owner_id=owner_id,
@@ -182,15 +177,15 @@ async def validate_signature(
         user_id: int,
         gdz_id: int,
         signature: int,
-
 ):
-    n = 809515791869499243174941451762899441614482617547898987827395061981105929076561733144419479
-    d = 650829787042905124135448271022680351439083233465479533670348376973685481154468598903981211
-    code = (
-        select(models.Codes)
+    n = 976244680564357686203172406534020527158624852187877139888568277444800468497409358863572759
+    e = 3
+    code = db.execute(
+        select(models.Codes.code)
         .where(models.Codes.user_id == user_id)
         .where(models.Codes.gdz_id == gdz_id)
-    )
+    ).scalar()
 
-    decrypted = pow(signature, 3, d)
-    return decrypted == str(code)
+    decrypted = pow(signature, e, n)
+    print(decrypted, code)
+    return decrypted == code

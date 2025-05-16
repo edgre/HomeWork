@@ -24,9 +24,7 @@ class Token(BaseModel):
 
 class GDZCreate(BaseModel):
         description: str
-        textbook: str
-        exercise: str
-        subject: str
+        full_description: str
         category: str
         price: int
         rating: float = 0.0
@@ -35,13 +33,15 @@ class GDZCreate(BaseModel):
 
         model_config = ConfigDict(from_attributes=True)
 
+class GDZPublicShort(BaseModel):
+    id:int
+    price:int
+    description:str
+
 class GDZPublic(BaseModel):
     id: int
     owner_id: int
     description: str
-    textbook: str
-    exercise: str
-    subject: str
     price: int
     category: str
     rating: float
@@ -49,7 +49,11 @@ class GDZPublic(BaseModel):
 
 class GDZPrivate(GDZPublic):
     content: str
+    content_text: str
 
 class GDZRatingIn(BaseModel):
     gdz_id: int
-    value: int  # от 1 до 5
+    value: int  # от 1 до
+
+class Signature(BaseModel):
+    value: int

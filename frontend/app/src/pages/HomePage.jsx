@@ -6,83 +6,96 @@ import HeaderButtom1 from "../components/ui/buttomHeader1";
 import CapIcon from "../assets/images/GraduationCap.svg";
 import ButtonWithIcon from "../components/ui/iconTextButton.jsx";
 
-const categories = {
-  laboratoryWorks: [
-    { name: "Программирование", slug: "lab-programming" },
-    { name: "Модели безопасности", slug: "lab-secmodel" },
-    { name: "Компьютерные сети", slug: "lab-networks" },
-    { name: "ТЧМК", slug: "lab-tchmk" },
-    { name: "Языки программирования", slug: "lab-plangs" },
-  ],
-  researchWorks: [
-    { name: "Курсовая работа", slug: "coursework" },
-    { name: "Научно-исследовательская работа", slug: "research" },
-    { name: "Диплом", slug: "diploma" },
-    { name: "BKP", slug: "vkr" },
-  ],
-  schoolTasks: [
-    { name: "Алгебра", slug: "school-algebra" },
-    { name: "Геометрия", slug: "school-geometry" },
-    { name: "Физика", slug: "school-physics" },
-    { name: "Информатика", slug: "school-informatics" },
-  ],
-  universityTasks: [
-    { name: "Мат. анализ", slug: "high-mathanalisis" },
-    { name: "Экономика", slug: "high-economics" },
-    { name: "КМЗИ", slug: "high-kmzi" },
-    { name: "Криптография", slug: "high-cryptography" },
-    { name: "Мат. статистика", slug: "high-statistics" },
-    { name: "Теория вероятности", slug: "high-probability" },
-    { name: "Алгебра", slug: "high-algebra" },
-    { name: "Программирование", slug: "high-programming" },
-  ],
+// Константы для названий категорий (можно вынести в отдельный файл)
+const CATEGORY_TITLES = {
+  laboratoryWorks: "ВУЗ • Лабораторные работы",
+  researchWorks: "ВУЗ • Исследовательские работы",
+  schoolTasks: "Школьный курс • Задачи",
+  universityTasks: "ВУЗ • Задачи"
 };
 
 const HomePage = () => {
   const navigate = useNavigate();
-  // const [activeCategory, setActiveCategory] = useState(null);
-  const labWorksRef = useRef(null);
-  const researchRef = useRef(null);
-  const schoolRef = useRef(null);
-  const universityRef = useRef(null);
+  const [categories, setCategories] = useState({
+    laboratoryWorks: [],
+    researchWorks: [],
+    schoolTasks: [],
+    universityTasks: []
+  });
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
 
-  const handleCardClick = (slug) => {
-    navigate(`/category/${slug}`);
+  const refs = {
+    laboratoryWorks: useRef(null),
+    researchWorks: useRef(null),
+    schoolTasks: useRef(null),
+    universityTasks: useRef(null)
   };
+
+  const fetchSubjects = async (category) => {
+    try {
+      const response = await fetch(`/api/subjects/${category}`);
+      if (!response.ok) throw new Error(`Failed to load ${category}`);
+      return await response.json();
+    } catch (err) {
+      console.error(`Error loading ${category}:`, err);
+      setError(err.message);
+      return [];
+    }
+  };
+
+  useEffect(() => {
+    const loadAllCategories = async () => {
+      try {
+        setLoading(true);
+
+        const [labData, researchData, schoolData, universityData] = await Promise.all([
+          fetchSubjects("laboratoryWorks"),
+          fetchSubjects("researchWorks"),
+          fetchSubjects("schoolTasks"),
+          fetchSubjects("universityTasks")
+        ]);
+
+        setCategories({
+          laboratoryWorks: labData,
+          researchWorks: researchData,
+          schoolTasks: schoolData,
+          universityTasks: universityData
+        });
+      } catch (err) {
+        setError(err.message);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    loadAllCategories();
+  }, []);
 
   useEffect(() => {
     const setupHorizontalScroll = (ref) => {
       if (!ref.current) return;
 
-      ref.current.addEventListener("wheel", (event) => {
-        if (event.deltaMode === event.DOM_DELTA_PIXEL) {
-          var modifier = 1;
-        } else if (event.deltaMode === event.DOM_DELTA_LINE) {
-          var modifier = parseInt(getComputedStyle(ref.current).lineHeight);
-        } else if (event.deltaMode === event.DOM_DELTA_PAGE) {
-          var modifier = ref.current.clientHeight;
-        }
-
+      const handleWheel = (event) => {
         if (event.deltaY !== 0) {
-          ref.current.scrollLeft += modifier * event.deltaY;
+          ref.current.scrollLeft += event.deltaY;
           event.preventDefault();
         }
-      });
+      };
+
+      ref.current.addEventListener('wheel', handleWheel);
+      return () => ref.current.removeEventListener('wheel', handleWheel);
     };
 
-    setupHorizontalScroll(labWorksRef);
-    setupHorizontalScroll(researchRef);
-    setupHorizontalScroll(schoolRef);
-    setupHorizontalScroll(universityRef);
-
-    return () => {
-      [labWorksRef, researchRef, schoolRef, universityRef].forEach((ref) => {
-        if (ref.current) {
-          ref.current.removeEventListener("wheel");
-        }
-      });
-    };
+    Object.values(refs).forEach(ref => setupHorizontalScroll(ref));
   }, []);
+
+  const handleCardClick = (slug) => {
+    navigate(`/category/${slug}`);
+  };
+
+  if (loading) return <div className="loading">Загрузка...</div>;
+  if (error) return <div className="error">Ошибка: {error}</div>;
 
   return (
     <div className="">
@@ -92,66 +105,33 @@ const HomePage = () => {
       </header>
 
       <div className="grid">
-        <div className="row-complete">
-          <div className="row-header">Школьный курс • Задачи</div>
-          <div className="row-cards" ref={schoolRef}>
-            {categories.schoolTasks.map((task, index) => (
-              <button
-                key={index}
-                className="card"
-                onClick={() => handleCardClick(task.slug)}
-              >
-                {task.name}
-              </button>
-            ))}
+        {Object.entries(categories).map(([categoryKey, items]) => (
+          <div className="row-complete" key={categoryKey}>
+            <div className="row-header">{CATEGORY_TITLES[categoryKey]}</div>
+            <div className="row-cards" ref={refs[categoryKey]}>
+              {items.map((item, index) => (
+                categoryKey === 'researchWorks' ? (
+                  <ButtonWithIcon
+                    icon={CapIcon}
+                    key={index}
+                    className="card"
+                    onClick={() => handleCardClick(item.slug)}
+                  >
+                    {item.subject_name || item.name}
+                  </ButtonWithIcon>
+                ) : (
+                  <button
+                    key={index}
+                    className="card"
+                    onClick={() => handleCardClick(item.slug)}
+                  >
+                    {item.subject_name || item.name}
+                  </button>
+                )
+              ))}
+            </div>
           </div>
-        </div>
-
-        <div className="row-complete">
-          <div className="row-header">ВУЗ • Задачи</div>
-          <div className="row-cards" ref={universityRef}>
-            {categories.universityTasks.map((task, index) => (
-              <button
-                key={index}
-                className="card"
-                onClick={() => handleCardClick(task.slug)}
-              >
-                {task.name}
-              </button>
-            ))}
-          </div>
-        </div>
-
-        <div className="row-complete">
-          <div className="row-header">ВУЗ • Лабораторные работы</div>
-          <div className="row-cards" ref={labWorksRef}>
-            {categories.laboratoryWorks.map((work, index) => (
-              <button
-                key={index}
-                className="card"
-                onClick={() => handleCardClick(work.slug)}
-              >
-                {work.name}
-              </button>
-            ))}
-          </div>
-        </div>
-
-        <div className="row-complete">
-          <div className="row-header">ВУЗ • Исследовательские работы</div>
-          <div className="row-cards" ref={researchRef}>
-            {categories.researchWorks.map((work, index) => (
-              <ButtonWithIcon
-                icon={CapIcon}
-                key={index}
-                className="card"
-                onClick={() => handleCardClick(work.slug)}
-              >
-                {work.name}
-              </ButtonWithIcon>
-            ))}
-          </div>
-        </div>
+        ))}
       </div>
     </div>
   );

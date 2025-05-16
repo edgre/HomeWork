@@ -1,15 +1,14 @@
 from fastapi import FastAPI, HTTPException, Depends, security, Request, UploadFile, File, Form
+from typing import List, Dict
 from fastapi.middleware.cors import CORSMiddleware
 import sqlalchemy.orm as orm
-from sqlalchemy.orm import Session
-from sqlalchemy import select, desc, func
 from services import get_db
 import services
 import models
 import schemas
-import random
-from PIL import Image  # Для работы с изображениями
-import io
+from typing import List, Dict, Union
+from fastapi import Depends
+from sqlalchemy.orm import Session
 
 app = FastAPI()
 
@@ -73,37 +72,59 @@ async def create_gdz_en(
         raise
     return await services.create_gdz(db, gdz_data, content_file, owner_id=current_user.id)
 
-@app.get("/gdz/", response_model=list[schemas.GDZPublic])
-def get_all_gdz(db: Session = Depends(get_db)):
-    return db.query(models.GDZ).all()
+@app.get("/subjects/{category}", response_model=List[Dict[str, str]])
+def get_subjects_by_category(
+    category: str,
+    db: Session = Depends(get_db)
+):
+    # Запрос для получения subject_name и slug
+    subjects = db.query(
+        models.Subjects.subject_name,
+        models.Subjects.paths
+    ).filter(
+        models.Subjects.category == category
+    ).all()
+    # Преобразуем результат в список словарей
+    return [
+        {"subject_name": subject.subject_name, "slug": subject.paths}
+        for subject in subjects
+    ]
 
 
-@app.get("/gdz/sorted", response_model=list[schemas.GDZPublic])
-async def get_sorted_gdz(db: Session = Depends(get_db)):
-    result = db.execute(
-        select(models.GDZ)
-        .order_by(models.GDZ.rating.desc())
-        .limit(10)
-    )
-    gdz_list = result.scalars().all()
+# @app.get("/gdz/", response_model=list[schemas.GDZPublic])
+# def get_all_gdz(db: Session = Depends(get_db)):
+#     return db.query(models.GDZ).all()
 
-    # Отладочная печать
-    for gdz in gdz_list:
-        print(f"ID: {gdz.id}, Rating: {gdz.rating}, Desc: {gdz.description}")
-
-    return gdz_list
-
-
-# @app.get("/gdz/by-category/{category}/{subject}", response_model=list[schemas.GDZPublic])
-# def get_gdz_by_category(category: str, subject db: Session = Depends(get_db)):
-#     return (db.query(models.GDZ)
-#             .filter(models.GDZ.category == category)
-#             .filter (models.GDZ.subject == subject)
-#             .all())
+# @app.get("/gdz/sorted", response_model=list[schemas.GDZPublic])
+# async def get_sorted_gdz(db: Session = Depends(get_db)):
+#     result = db.execute(
+#         select(models.GDZ)
+#         .order_by(models.GDZ.rating.desc())
+#         .limit(10)
+#     )
+#     gdz_list = result.scalars().all()
+#
+#     # Отладочная печать
+#     for gdz in gdz_list:
+#         print(f"ID: {gdz.id}, Rating: {gdz.rating}, Desc: {gdz.description}")
+#
+#     return gdz_list
 
 
-
-
+@app.get("/gdz_category/{category}", response_model=list[schemas.GDZPublicShort])
+def get_gdz_by_category(category: str, db: Session = Depends(get_db)):
+    tasks = ((db.query(models.GDZ)
+     .filter(models.GDZ.category == category))
+     .all())
+    return [
+            {
+                "id": task.id,
+                "description": task.description,
+                "price": task.price,
+                # Добавьте другие необходимые поля
+            }
+            for task in tasks
+        ]
 @app.get("/gdz/my", response_model=list[schemas.GDZPrivate])
 async def get_my_gdz(
         db: Session = Depends(get_db),
@@ -150,24 +171,6 @@ async def get_gdz_full(
     return gdz
 
 
-app.get("/gdz/by-filter/", response_model=list[schemas.GDZPublic])
-
-
-async def get_gdz_by_filter(
-        category: str = None,  # Ступень образования (например: "9", "11", "ege")
-        subject: str = None,  # Предмет (например: "Математика", "Физика")
-        db: Session = Depends(get_db)
-):
-    query = db.query(models.GDZ)
-
-    if category:
-        query = query.filter(models.GDZ.category == category)
-    if subject:
-        query = query.filter(models.GDZ.subject == subject)
-
-    return query.all()
-
-
 @app.post("/gdz/{gdz_id}/purchase", status_code=201)
 async def purchase_gdz(
         gdz_id: int,
@@ -195,7 +198,7 @@ async def purchase_gdz(
         db.refresh(purchase)
         return {"message": "Бесплатное ГДЗ успешно получено", "gdz_id": gdz_id}
     else:
-        confirmation_code = random.randint(1000, 9999)
+        confirmation_code = 5578
 
         code = models.Codes(
             user_id = current_user.id,
@@ -213,17 +216,15 @@ async def purchase_gdz(
 @app.post("/gdz/{gdz_id}/confirm-purchase", status_code=201)
 async def confirm_purchase(
         gdz_id: int,
-        signature: int,
+        signature: schemas.Signature,
         db: Session = Depends(get_db),
         current_user: models.User = Depends(services.get_current_user)
 ):
-
-    if await services.validate_signature (db, gdz_id, current_user.id, signature):
+    if await services.validate_signature (db, current_user.id, gdz_id, signature.value):
 
         purchase = models.Purchase(
             buyer_id=current_user.id,
             gdz_id=gdz_id,
-            is_paid=True,
         )
 
         db.add(purchase)
@@ -233,9 +234,6 @@ async def confirm_purchase(
         return {"message": "Покупка подтверждена", "gdz_id": gdz_id}
     else:
             print("ошибка")
-
-
-
 
 
 @app.get("/")

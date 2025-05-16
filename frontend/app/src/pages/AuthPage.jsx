@@ -1,217 +1,193 @@
-import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import LogoVertical from "../assets/images/Logo-vertical.svg";
-// CSS импорты
-import "../assets/styles/font.css";
-import "../assets/styles/buttons.css";
-import "../assets/styles/colors.css";
-import "../assets/styles/text.css";
-import "../assets/styles/authPage.css";
+import React, { useState, useRef, useEffect } from "react";
+import "../assets/styles/grid.css";
+import HeaderTop from "../components/ui/topHeader";
+import HeaderButtom1 from "../components/ui/buttomHeader1";
+import CapIcon from "../assets/images/GraduationCap.svg";
+import ButtonWithIcon from "../components/ui/iconTextButton.jsx";
 
-const AuthPage = () => {
-  const [realname, setRealname] = useState("");
-  const [username, setUsername] = useState(""); // Для входа используем username
-  const [password, setPassword] = useState("");
-  const [isRegistering, setIsRegistering] = useState(false);
-  const [error, setError] = useState("");
+const HomePage = () => {
   const navigate = useNavigate();
+  const [categories, setCategories] = useState({
+    laboratoryWorks: [],
+    researchWorks: [],
+    schoolTasks: [],
+    universityTasks: []
+  });
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
 
-  const handleusername = async () => {
-    const formData = new URLSearchParams();
-    formData.append("username", username); // Используем username для входа
-    formData.append("password", password);
+  const labWorksRef = useRef(null);
+  const researchRef = useRef(null);
+  const schoolRef = useRef(null);
+  const universityRef = useRef(null);
 
+  // Функция для загрузки данных из API
+  const fetchSubjects = async (category) => {
     try {
-      const response = await fetch(`api/token`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/x-www-form-urlencoded",
-        },
-        body: formData.toString(), // Правильный формат для x-www-form-urlencoded
-      });
-
+      const response = await fetch(`/api/subjects/${category}`);
       if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.detail || "Ошибка входа");
+        throw new Error(`Ошибка при загрузке ${category}`);
       }
-
       const data = await response.json();
-      localStorage.setItem("access_token", data.access_token);
-      navigate("/home");
+      return data.map(item => ({
+        name: item.subject_name,
+        slug: item.slug
+      }));
     } catch (err) {
-      throw err;
+      console.error(`Ошибка при загрузке ${category}:`, err);
+      setError(err.message);
+      return [];
     }
   };
 
-  const handleRegister = async () => {
-    try {
-      const response = await fetch(`api/register`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Accept: "application/json",
-        },
-        body: JSON.stringify({
-          username: username,
-          password: password,
-          realname: realname,
-        }),
+  // Загрузка всех категорий при монтировании компонента
+  useEffect(() => {
+    const loadAllCategories = async () => {
+      try {
+        setLoading(true);
+
+        const [labWorks, research, school, university] = await Promise.all([
+          fetchSubjects("laboratoryWorks"),
+          fetchSubjects("researchWorks"),
+          fetchSubjects("schoolTasks"),
+          fetchSubjects("universityTasks")
+        ]);
+
+        setCategories({
+          laboratoryWorks: labWorks,
+          researchWorks: research,
+          schoolTasks: school,
+          universityTasks: university
+        });
+      } catch (err) {
+        setError(err.message);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    loadAllCategories();
+  }, []);
+
+  // Настройка горизонтального скролла (остается без изменений)
+  useEffect(() => {
+    const setupHorizontalScroll = (ref) => {
+      if (!ref.current) return;
+
+      ref.current.addEventListener("wheel", (event) => {
+        if (event.deltaMode === event.DOM_DELTA_PIXEL) {
+          var modifier = 1;
+        } else if (event.deltaMode === event.DOM_DELTA_LINE) {
+          var modifier = parseInt(getComputedStyle(ref.current).lineHeight);
+        } else if (event.deltaMode === event.DOM_DELTA_PAGE) {
+          var modifier = ref.current.clientHeight;
+        }
+
+        if (event.deltaY !== 0) {
+          ref.current.scrollLeft += modifier * event.deltaY;
+          event.preventDefault();
+        }
       });
+    };
 
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.detail || "Ошибка регистрации");
-      }
+    setupHorizontalScroll(labWorksRef);
+    setupHorizontalScroll(researchRef);
+    setupHorizontalScroll(schoolRef);
+    setupHorizontalScroll(universityRef);
 
-      setError("Регистрация успешна! Теперь вы можете войти.");
-      setIsRegistering(false);
-      setRealname("");
-      setUsername("");
-      setPassword("");
-    } catch (err) {
-      throw err;
-    }
+    return () => {
+      [labWorksRef, researchRef, schoolRef, universityRef].forEach((ref) => {
+        if (ref.current) {
+          ref.current.removeEventListener("wheel");
+        }
+      });
+    };
+  }, []);
+
+  const handleCardClick = (slug) => {
+    navigate(`/category/${slug}`);
   };
 
-  const handleAuth = async (e) => {
-    e.preventDefault();
-    setError("");
+  if (loading) {
+    return <div className="loading">Загрузка...</div>;
+  }
 
-    // Валидация полей
-    if (isRegistering) {
-      // При регистрации проверяем realname и username
-      if (!realname || !username || !password) {
-        setError("Пожалуйста, заполните все поля");
-        return;
-      }
-    } else {
-      // При входе проверяем только username и password
-      if (!username || !password) {
-        setError("Пожалуйста, заполните все поля");
-        return;
-      }
-    }
-
-    try {
-      if (isRegistering) {
-        await handleRegister();
-      } else {
-        await handleUsername();
-      }
-    } catch (err) {
-      setError(err.message || "Произошла ошибка. Попробуйте снова.");
-      console.error("Auth error:", err);
-    }
-  };
+  if (error) {
+    return <div className="error">Ошибка: {error}</div>;
+  }
 
   return (
-    <div className="container">
-      <div
-        style={{
-          display: "flex",
-          flexDirection: "column",
-          alignItems: "center",
-        }}
-      >
-        <div style={{ margin: "32px" }}>
-          <img
-            src={LogoVertical}
-            width="400"
-            height="170"
-            alt="Домашка Плюс"
-            loading="lazy"
-          />
+    <div className="">
+      <header>
+        <HeaderTop username={"Gleb"} />
+        <HeaderButtom1 />
+      </header>
+
+      <div className="grid">
+        <div className="row-complete">
+          <div className="row-header">Школьный курс • Задачи</div>
+          <div className="row-cards" ref={schoolRef}>
+            {categories.schoolTasks.map((task, index) => (
+              <button
+                key={index}
+                className="card"
+                onClick={() => handleCardClick(task.slug)}
+              >
+                {task.name}
+              </button>
+            ))}
+          </div>
         </div>
 
-        <div className="auth-form-container">
-          <h1
-            className="h1"
-            style={{ verticalAlign: "center", justifyContent: "center" }}
-          >
-            Добрый день
-          </h1>
-          <h2
-            style={{
-              marginTop: "5px",
-              verticalAlign: "center",
-              justifyContent: "center",
-            }}
-          >
-            Пожалуйста авторизуйтесь
-          </h2>
-
-          <form className="auth-form" onSubmit={handleAuth}>
-            <div className="form-group" style={{ padding: "0px" }}>
-              <label className="switch">
-                <input
-                  type="checkbox"
-                  checked={isRegistering}
-                  onChange={() => setIsRegistering(!isRegistering)}
-                />
-                <span className="slider">
-                  <span className="text-off">Вход</span>
-                  <span className="text-on">Регистрация</span>
-                </span>
-              </label>
-            </div>
-            {isRegistering && (
-              <div className="form-group">
-                <input
-                  type="text"
-                  id="realname"
-                  className="inputBox"
-                  placeholder="Никнейм"
-                  value={realname}
-                  onChange={(e) => setRealname(e.target.value)}
-                  required={isRegistering}
-                />
-              </div>
-            )}
-
-            {/* Поле username (используется для входа) */}
-            <div className="form-group">
-              <input
-                type="text"
-                id="username"
-                className="inputBox"
-                placeholder="Логин"
-                value={username}
-                onChange={(e) => setUsername(e.target.value)}
-                required
-              />
-            </div>
-
-            <div className="form-group">
-              <input
-                type="password"
-                id="password"
-                className="inputBox"
-                placeholder="Пароль"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                required
-              />
-            </div>
-
-            <div className="form-group">
+        <div className="row-complete">
+          <div className="row-header">ВУЗ • Задачи</div>
+          <div className="row-cards" ref={universityRef}>
+            {categories.universityTasks.map((task, index) => (
               <button
-                type="submit"
-                className="button"
-                style={{ marginTop: "8px" }}
+                key={index}
+                className="card"
+                onClick={() => handleCardClick(task.slug)}
               >
-                {isRegistering ? "Зарегистрироваться" : "Войти"}
+                {task.name}
               </button>
-            </div>
-          </form>
+            ))}
+          </div>
+        </div>
+
+        <div className="row-complete">
+          <div className="row-header">ВУЗ • Лабораторные работы</div>
+          <div className="row-cards" ref={labWorksRef}>
+            {categories.laboratoryWorks.map((work, index) => (
+              <button
+                key={index}
+                className="card"
+                onClick={() => handleCardClick(work.slug)}
+              >
+                {work.name}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        <div className="row-complete">
+          <div className="row-header">ВУЗ • Исследовательские работы</div>
+          <div className="row-cards" ref={researchRef}>
+            {categories.researchWorks.map((work, index) => (
+              <ButtonWithIcon
+                icon={CapIcon}
+                key={index}
+                className="card"
+                onClick={() => handleCardClick(work.slug)}
+              >
+                {work.name}
+              </ButtonWithIcon>
+            ))}
+          </div>
         </div>
       </div>
-      {error && (
-        <div className="auth-error-container">
-          <div className="h5-error">{error}</div>
-        </div>
-      )}
     </div>
   );
 };
 
-export default AuthPage;
+export default HomePage;
