@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useContext } from "react";
 import { useNavigate } from "react-router-dom";
 import LogoVertical from "../assets/images/Logo-vertical.svg";
 // CSS импорты
@@ -7,6 +7,8 @@ import "../assets/styles/buttons.css";
 import "../assets/styles/colors.css";
 import "../assets/styles/text.css";
 import "../assets/styles/authPage.css";
+import { UserContext } from "../contexts/UserContext";
+
 
 const AuthPage = () => {
   const [realname, setRealname] = useState("");
@@ -15,33 +17,56 @@ const AuthPage = () => {
   const [isRegistering, setIsRegistering] = useState(false);
   const [error, setError] = useState("");
   const navigate = useNavigate();
+  const { setUser } = useContext(UserContext);
 
   const handleUsername = async () => {
-    const formData = new URLSearchParams();
-    formData.append("username", username); // Используем username для входа
-    formData.append("password", password);
+  const formData = new URLSearchParams();
+  formData.append("username", username);
+  formData.append("password", password);
 
-    try {
-      const response = await fetch(`api/token`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/x-www-form-urlencoded",
-        },
-        body: formData.toString(), // Правильный формат для x-www-form-urlencoded
-      });
+  try {
+    const response = await fetch(`api/token`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/x-www-form-urlencoded",
+      },
+      body: formData.toString(),
+    });
 
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.detail || "Ошибка входа");
-      }
-
-      const data = await response.json();
-      localStorage.setItem("access_token", data.access_token);
-      navigate("/home");
-    } catch (err) {
-      throw err;
+    if (!response.ok) {
+      const errorData = await response.json();
+      throw new Error(errorData.detail || "Ошибка входа");
     }
-  };
+
+    const data = await response.json();
+    localStorage.setItem("access_token", data.access_token);
+
+    // Загрузка данных пользователя
+    const userResponse = await fetch("/api/users/me", {
+      headers: {
+        Authorization: `Bearer ${data.access_token}`
+      }
+    });
+
+    if (!userResponse.ok) {
+      throw new Error("Не удалось загрузить данные пользователя");
+    }
+
+    const userData = await userResponse.json();
+
+    // Установка пользователя в контекст
+    setUser({
+      username: userData.username,
+      realname: userData.realname,
+      rating: parseFloat(userData.rating),
+      access_token: data.access_token
+    });
+
+    navigate("/home");
+  } catch (err) {
+    throw err;
+  }
+};
 
   const handleRegister = async () => {
     try {

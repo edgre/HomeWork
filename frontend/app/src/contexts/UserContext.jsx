@@ -1,7 +1,5 @@
-// contexts/UserContext.js
 import React, { createContext, useState, useEffect, useCallback } from 'react';
 
-// Типы данных (для TypeScript)
 /**
  * @typedef {Object} User
  * @property {string} username - Логин пользователя
@@ -11,7 +9,9 @@ import React, { createContext, useState, useEffect, useCallback } from 'react';
 
 export const UserContext = createContext({
   user: null,
-  setUser: () => {}
+  setUser: () => {
+    console.warn('setUser called without Provider');
+  }
 });
 
 export const UserProvider = ({ children }) => {
@@ -19,7 +19,6 @@ export const UserProvider = ({ children }) => {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState(null);
 
-  // Получение данных пользователя
   const fetchUserData = useCallback(async (token) => {
     try {
       const response = await fetch('/api/users/me', {
@@ -34,11 +33,10 @@ export const UserProvider = ({ children }) => {
 
       const data = await response.json();
 
-      // Нормализация данных
       return {
-        username: data.username,
-        realname: data.realname,
-        rating: parseFloat(data.rating),
+        username: data.username || 'Гость',
+        realname: data.realname || null,
+        rating: data.rating ? parseFloat(data.rating) : null,
       };
     } catch (err) {
       console.error('Ошибка загрузки данных:', err);
@@ -47,7 +45,6 @@ export const UserProvider = ({ children }) => {
     }
   }, []);
 
-  // Инициализация пользователя
   useEffect(() => {
     const initializeUser = async () => {
       const token = localStorage.getItem('access_token');
@@ -57,16 +54,21 @@ export const UserProvider = ({ children }) => {
       }
 
       setIsLoading(true);
-      const userData = await fetchUserData(token);
-      setUser(userData);
-      setIsLoading(false);
+      try {
+        const userData = await fetchUserData(token);
+        setUser(userData);
+      } catch (err) {
+        console.error('Ошибка инициализации:', err);
+      } finally {
+        setIsLoading(false);
+      }
     };
 
     initializeUser();
   }, [fetchUserData]);
 
   return (
-    <UserContext.Provider value={ [user,setUser]}>
+    <UserContext.Provider value={{ user, setUser }}>
       {children}
     </UserContext.Provider>
   );

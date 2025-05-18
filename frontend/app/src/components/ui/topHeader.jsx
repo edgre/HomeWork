@@ -1,10 +1,14 @@
-import React from "react";
+import React, { useContext } from "react";
+import { Link } from "react-router-dom";
+import { UserContext } from "../../contexts/UserContext"; // Импортируем контекст
 import LogoHorizontal from "../../assets/images/Logo-horizontal.svg";
 import LogoProfile from "../../assets/images/User.svg";
 import "../../assets/styles/headers.css";
-import { Link } from "react-router-dom";
 
-const HeaderTop = ({ username }) => {
+const HeaderTop = () => {
+  // Получаем данные пользователя из контекста
+  const { user } = useContext(UserContext);
+
   return (
     <header className="headerTop">
       <div className="">
@@ -20,7 +24,8 @@ const HeaderTop = ({ username }) => {
         </Link>
       </div>
       <nav className="header-menu">
-        <h3>{username}</h3>
+        {/* Выводим username с проверкой на существование */}
+        <h3>{user.username}</h3>
         <Link to="/me">
           <img
             className="icon-button"
