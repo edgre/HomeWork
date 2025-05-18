@@ -43,7 +43,7 @@ async def get_user (db: orm.Session(), username: str):
 
 async def authenticate_user(db: orm.Session, username: str, password: str):
     user = await get_user(db, username)
-    if (not user) or (not verify_password(password, user.password_hash)):
+    if (not user) or (not await verify_password(password, user.password_hash)):
         return False
     return user
 
