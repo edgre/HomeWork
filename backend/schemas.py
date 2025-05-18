@@ -8,7 +8,6 @@ class User(BaseModel):
     username: str
     realname: str
 
-
 class UserCreate(User):
     password: str
 
@@ -27,8 +26,8 @@ class GDZCreate(BaseModel):
         full_description: str
         category: str
         price: int
-        rating: float = 0.0
-        is_elite: bool = False
+        # rating: float = 0.0s
+        # is_elite: bool = False
         content_text: str
 
         model_config = ConfigDict(from_attributes=True)
@@ -54,6 +53,16 @@ class GDZPrivate(GDZPublic):
 class GDZRatingIn(BaseModel):
     gdz_id: int
     value: int  # от 1 до
+
+class UserProfileResponse(BaseModel):
+    username: str
+    realname: str
+    user_rating: Optional[float] = None
+    # is_elite: bool
+    gdz_list: List[GDZPrivate]  # Используем существующую модель GDZPrivate
+
+    class Config:
+        from_attributes = True
 
 class Signature(BaseModel):
     value: int

@@ -10,6 +10,7 @@ import ProfilePage from "./pages/ProfilePage.jsx";
 import NotFoundPage from "./pages/Notfoundpage.jsx";
 import TaskPage from "./pages/TaskPage.jsx";
 import TaskCreatePage from "./pages/TaskCreatePage.jsx";
+import { UserProvider } from "./contexts/UserContext"; // Импортируем провайдер
 
 const router = createBrowserRouter([
   {
@@ -44,6 +45,8 @@ const router = createBrowserRouter([
 
 createRoot(document.getElementById("root")).render(
   <StrictMode>
-    <RouterProvider router={router} />
+    <UserProvider> {/* Обертка для всего приложения */}
+      <RouterProvider router={router} />
+    </UserProvider>
   </StrictMode>
 );

@@ -2,75 +2,79 @@ import React, { useState } from "react";
 import "../../assets/styles/dropDown.css";
 import "../../assets/styles/authPage.css";
 
-const DropdownList = () => {
+const DropdownList = ({ onCategoryChange, onSubcategoryChange }) => {
   const [selectedCategory, setSelectedCategory] = useState("");
   const [selectedSubcategory, setSelectedSubcategory] = useState("");
 
+  // Категории и подкатегории, где id и name совпадают
   const categories = [
     {
-      id: "researchWorks",
-      name: "ВУЗ научные работы",
+      id: "Научные работы",
+      name: "Научные работы",
       subcategories: [
-        { id: "coursework", name: "Курсовая работа" },
-        { id: "research", name: "Научно-исследовательская работа" },
-        { id: "diploma", name: "Диплом" },
-        { id: "vkr", name: "ВКР" },
+        { id: "Курсовая работа", name: "Курсовая работа" },
+        { id: "Научно-исследовательская работа", name: "Научно-исследовательская работа" },
+        { id: "Диплом", name: "Диплом" },
+        { id: "ВКР", name: "ВКР" },
       ],
     },
     {
-      id: "laboratoryWorks",
-      name: "ВУЗ лабораторные работы",
+      id: "Лабораторные работы",
+      name: "Лабораторные работы",
       subcategories: [
-        { id: "lab-programming", name: "Программирование" },
-        { id: "lab-secmodel", name: "Модели безопасности" },
-        { id: "lab-networks", name: "Компьютерные сети" },
-        { id: "lab-tchmk", name: "ТЧМК" },
-        { id: "lab-plangs", name: "Языки программирования" },
+        { id: "Программирование", name: "Программирование" },
+        { id: "Модели безопасности", name: "Модели безопасности" },
+        { id: "Компьютерные сети", name: "Компьютерные сети" },
+        { id: "ТЧМК", name: "ТЧМК" },
+        { id: "Языки программирования", name: "Языки программирования" },
       ],
     },
     {
-      id: "universityTasks",
+      id: "Университетские задачи",
       name: "ВУЗ задачи",
       subcategories: [
-        { id: "high-mathanalisis", name: "Мат. анализ" },
-        { id: "high-economics", name: "Экономика" },
-        { id: "high-kmzi", name: "КМЗИ" },
-        { id: "high-cryptography", name: "Криптография" },
-        { id: "high-statistics", name: "Мат. статистика" },
-        { id: "high-probability", name: "Теория вероятности" },
-        { id: "high-algebra", name: "Алгебра" },
-        { id: "high-programming", name: "Программирование" },
+        { id: "Мат. анализ", name: "Мат. анализ" },
+        { id: "Экономика", name: "Экономика" },
+        { id: "КМЗИ", name: "КМЗИ" },
+        { id: "Криптография", name: "Криптография" },
+        { id: "Мат. статистика", name: "Мат. статистика" },
+        { id: "Теория вероятности", name: "Теория вероятности" },
+        { id: "Алгебра", name: "Алгебра" },
+        { id: "Программирование", name: "Программирование" },
       ],
     },
     {
-      id: "schoolTasks",
+      id: "Школьные задачи",
       name: "Школа задачи",
       subcategories: [
-        { id: "school-algebra", name: "Алгебра" },
-        { id: "school-geometry", name: "Геометрия" },
-        { id: "school-physics", name: "Физика" },
-        { id: "school-informatics", name: "Информатика" },
+        { id: "Алгебра", name: "Алгебра" },
+        { id: "Геометрия", name: "Геометрия" },
+        { id: "Физика", name: "Физика" },
+        { id: "Информатика", name: "Информатика" },
       ],
     },
   ];
 
   const handleCategoryChange = (e) => {
-    setSelectedCategory(e.target.value);
+    const value = e.target.value;
+    setSelectedCategory(value);
     setSelectedSubcategory("");
+    onCategoryChange(value);
   };
 
   const handleSubcategoryChange = (e) => {
-    setSelectedSubcategory(e.target.value);
+    const value = e.target.value;
+    setSelectedSubcategory(value);
+    onSubcategoryChange(value);
   };
 
   const currentSubcategories = selectedCategory
-    ? categories.find((c) => c.id === selectedCategory).subcategories
+    ? categories.find((c) => c.id === selectedCategory)?.subcategories || []
     : [];
 
   return (
     <>
       <div className="form-group">
-        {/* <label className="dropdown-label">Категория</label> */}
         <select
           className="dropdown-select"
           value={selectedCategory}

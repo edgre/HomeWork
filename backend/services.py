@@ -91,7 +91,7 @@ async def create_gdz(
         file_content: UploadFile,
         owner_id: str
 ):
-    # Создаем папку media если ее нет
+    print("a")
 
     try:
         # Генерируем уникальное имя файла
@@ -112,11 +112,12 @@ async def create_gdz(
         # Создаем запись в БД
         gdz = models.GDZ(
             description=gdz_data.description,
-            full_description =  gdz_data.full_descripton,
+            full_description =  gdz_data.full_description,
             category=gdz_data.category,
-            is_elite=gdz_data.is_elite,
+            # is_elite=gdz_data.is_elite,
             owner_id=owner_id,
             content=filename,
+            content_text=gdz_data.content_text,
             price = gdz_data.price
         )
 
@@ -189,3 +190,26 @@ async def validate_signature(
     decrypted = pow(signature, e, n)
     print(decrypted, code)
     return decrypted == code
+
+
+def update_user_rating(db: orm.Session, owner_id: int):
+    """Обновляет рейтинг пользователя на основе его ГДЗ"""
+    user = db.query(models.User).get(owner_id)
+    if not user:
+        return
+
+    # Находим все оценки всех ГДЗ пользователя через связь
+    ratings = (
+        db.query(models.GDZRating.value)
+        .join(models.GDZ)
+        .filter(models.GDZ.owner_id == owner_id)
+        .all()
+    )
+
+    if ratings:
+        avg_rating = sum(r[0] for r in ratings) / len(ratings)
+        user.user_rating = round(avg_rating, 2)
+    else:
+        user.user_rating = 0.0
+
+    db.commit()

@@ -9,6 +9,8 @@ class User(db.Base):
     username = sql.Column(sql.String(50), unique=True, nullable=False)
     realname = sql.Column(sql.String(50), unique=False, nullable=False)
     password_hash = sql.Column(sql.String, nullable=False)
+    user_rating = sql.Column(sql.Float, nullable=False, default=0.0)
+
 
     GDZ = orm.relationship("GDZ", back_populates="user")
     purchases = orm.relationship("Purchase", back_populates="buyer")

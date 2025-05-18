@@ -55,6 +55,48 @@ async def username(form_data: security.OAuth2PasswordRequestForm = Depends(), db
     return await services.create_access_token(user)
 
 
+@app.get("/users/me", response_model=schemas.User)
+async def get_user(user: schemas.User = Depends(services.get_current_user)):
+    return user
+
+@app.get("/profile/data", response_model=schemas.UserProfileResponse)
+async def get_profile_data(
+        db: Session = Depends(get_db),
+        current_user: models.User = Depends(services.get_current_user)
+):
+    # Получаем данные пользователя напрямую из базы данных
+    user = db.query(models.User).filter(models.User.id == current_user.id).first()
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+
+    # Получаем ГДЗ пользователя
+    created_gdz = db.query(models.GDZ).filter(models.GDZ.owner_id == user.id).all()
+    purchased_gdz = await services.get_user_purchases(db, user.id)
+    gdz_list = []
+
+    for gdz in created_gdz + purchased_gdz:
+        gdz_list.append({
+            "id": gdz.id,
+            "description": gdz.description,
+            "category": gdz.category,
+            "content": gdz.content,
+            "content_text": gdz.content_text,
+            "price": gdz.price,
+            "rating": gdz.rating,
+            "is_elite": gdz.is_elite,
+            "owner_id": gdz.owner_id == user.id
+
+        })
+
+    return {
+        "username": user.username,
+        "realname": user.realname,
+        "user_rating": user.user_rating,
+        #"is_elite": user.is_elite,
+        "gdz_list": gdz_list
+    }
+
+
 @app.post("/gdz/create")
 async def create_gdz_en(
         content_file: UploadFile = File(...),
@@ -62,29 +104,28 @@ async def create_gdz_en(
         db: orm.Session = Depends(get_db),
         current_user=Depends(services.get_current_user)
 ):
-    print(f"Получен файл: {content_file.filename}")  # Проверяем получение файла
-    print(f"Размер файла: {content_file.size}")
-    print(gdz_str)
     try:
+        print(f"Получен файл: {content_file.filename}")  # Проверяем получение файла
+        print(f"Размер файла: {content_file.size}")
         gdz_data = schemas.GDZCreate.model_validate_json(gdz_str)
+        print(gdz_data)
     except ValueError as e:
         print(f"Ошибка валидации: {e}")
         raise
     return await services.create_gdz(db, gdz_data, content_file, owner_id=current_user.id)
+
 
 @app.get("/subjects/{category}", response_model=List[Dict[str, str]])
 def get_subjects_by_category(
     category: str,
     db: Session = Depends(get_db)
 ):
-    # Запрос для получения subject_name и slug
     subjects = db.query(
         models.Subjects.subject_name,
         models.Subjects.paths
     ).filter(
         models.Subjects.category == category
     ).all()
-    # Преобразуем результат в список словарей
     return [
         {"subject_name": subject.subject_name, "slug": subject.paths}
         for subject in subjects
@@ -125,19 +166,6 @@ def get_gdz_by_category(category: str, db: Session = Depends(get_db)):
             }
             for task in tasks
         ]
-@app.get("/gdz/my", response_model=list[schemas.GDZPrivate])
-async def get_my_gdz(
-        db: Session = Depends(get_db),
-        current_user: models.User = Depends(services.get_current_user)
-):
-    # Получаем ГДЗ, созданные пользователем
-    created_gdz = await services.get_gdz_by_owner(db, current_user.id)
-
-    # Получаем купленные ГДЗ
-    purchased_gdz = await services.get_user_purchases(db, current_user.id)
-
-    return created_gdz + purchased_gdz
-
 
 @app.get("/gdz/{gdz_id}", response_model=schemas.GDZPublic)
 async def get_gdz_by_id(gdz_id: int, db: Session = Depends(get_db)):
@@ -234,6 +262,39 @@ async def confirm_purchase(
         return {"message": "Покупка подтверждена", "gdz_id": gdz_id}
     else:
             print("ошибка")
+
+@app.post("/gdz/rate")
+async def rate_gdz(
+    rating: schemas.GDZRatingIn,
+    db: Session = Depends(get_db),
+    current_user: models.User = Depends(services.get_current_user)
+):
+    # Получаем ГДЗ со связью с владельцем
+    gdz = (
+        db.query(models.GDZ)
+        .options(orm.joinedload(models.GDZ.user))
+        .filter_by(id=rating.gdz_id)
+        .first()
+    )
+    if not gdz:
+        raise HTTPException(404, "ГДЗ не найдено")
+
+    # Создаем оценку
+    new_rating = models.GDZRating(
+        gdz_id=rating.gdz_id,
+        user_id=current_user.id,
+        value=rating.value
+    )
+    db.add(new_rating)
+    db.commit()
+
+    # Обновляем рейтинг автора ГДЗ
+    services.update_user_rating(db, gdz.owner_id)
+
+    return {
+        "detail": "Оценка добавлена",
+        "owner_rating": gdz.user.user_rating
+    }
 
 
 @app.get("/")
