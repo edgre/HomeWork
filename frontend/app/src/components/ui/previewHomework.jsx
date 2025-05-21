@@ -57,7 +57,7 @@ const PreviewHomework = ({ gdzId, onClose, flagToNotSetRating = 0, isStandaloneP
                 setData({
                     taskText: gdzData.full_description,
                     answerText: gdzData.content_text,
-                    photoUrl: gdzData.content,
+                    photoUrl: `/${gdzData.content}`,
                     isLoading: false,
                     error: null,
                     ownerId: gdzData.owner_id
@@ -121,7 +121,7 @@ const PreviewHomework = ({ gdzId, onClose, flagToNotSetRating = 0, isStandaloneP
     return (
         <div className="auth-form-container">
             <h2 className="bold">Задача</h2>
-            <h4>{data.taskText}</h4>
+            <h4>{data.photoUrl}</h4>
             <h2 className="bold">Решение</h2>
             <div className="photo-container">
                 {data.isLoading && <div className="photo-loader">Загрузка...</div>}

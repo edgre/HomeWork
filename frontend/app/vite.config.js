@@ -13,7 +13,7 @@ export default defineConfig({
       '/images': {
         target: 'http://localhost:8000',
         changeOrigin: true,
-        rewrite: (path) => path  // Не изменяем путь
+        rewrite: (path) => path
       }
     }
   }
