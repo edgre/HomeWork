@@ -48,18 +48,21 @@ class GDZPublic(BaseModel):
 
 class GDZPrivate(GDZPublic):
     content: str
+    full_description: str
     content_text: str
 
 class GDZRatingIn(BaseModel):
     gdz_id: int
     value: int  # от 1 до
 
+
+
 class UserProfileResponse(BaseModel):
     username: str
     realname: str
     user_rating: Optional[float] = None
     # is_elite: bool
-    gdz_list: List[GDZPrivate]  # Используем существующую модель GDZPrivate
+    gdz_list: List[GDZPublic]  # Используем существующую модель GDZPrivate
 
     class Config:
         from_attributes = True

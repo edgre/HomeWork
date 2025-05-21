@@ -54,8 +54,9 @@ const AuthPage = () => {
 
     const userData = await userResponse.json();
 
-    // Установка пользователя в контекст
+
     setUser({
+      id: userData.id,
       username: userData.username,
       realname: userData.realname,
       rating: parseFloat(userData.rating),

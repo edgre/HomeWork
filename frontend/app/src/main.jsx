@@ -1,8 +1,8 @@
 import { StrictMode } from "react";
 import { createRoot } from "react-dom/client";
 import { createBrowserRouter, RouterProvider } from "react-router-dom";
-import "../src/assets/styles/index.css";
-import App from "./App.jsx";
+import "./assets/styles/index.css";
+import { UserProvider } from "./contexts/UserContext";
 import AuthPage from "./pages/AuthPage.jsx";
 import HomePage from "./pages/HomePage.jsx";
 import CategoryPage from "./pages/CategoryPage.jsx";
@@ -10,7 +10,7 @@ import ProfilePage from "./pages/ProfilePage.jsx";
 import NotFoundPage from "./pages/Notfoundpage.jsx";
 import TaskPage from "./pages/TaskPage.jsx";
 import TaskCreatePage from "./pages/TaskCreatePage.jsx";
-import { UserProvider } from "./contexts/UserContext"; // Импортируем провайдер
+import GdzPage from "./pages/GdzPage";
 
 const router = createBrowserRouter([
   {
@@ -32,7 +32,11 @@ const router = createBrowserRouter([
   {
     path: "/me",
     element: <ProfilePage />,
-  },
+    },
+    {
+     path: "/gdz/:gdzId",
+     element: <GdzPage />,
+    },
   {
     path: "/create",
     element: <TaskCreatePage />,
@@ -45,7 +49,7 @@ const router = createBrowserRouter([
 
 createRoot(document.getElementById("root")).render(
   <StrictMode>
-    <UserProvider> {/* Обертка для всего приложения */}
+    <UserProvider>
       <RouterProvider router={router} />
     </UserProvider>
   </StrictMode>

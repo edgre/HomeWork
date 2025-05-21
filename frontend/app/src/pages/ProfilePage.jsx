@@ -1,11 +1,11 @@
 import React, { useState, useEffect } from "react";
-import { useNavigate } from "react-router-dom";
-import { Link } from "react-router-dom";
+import {useNavigate, Link} from "react-router-dom";
 import HeaderTop from "../components/ui/topHeader";
 import HeaderButtom2 from "../components/ui/buttomHeader2";
 import HomeWorkPanel from "../components/ui/hwPanelMe";
 import ProfileCard from "../components/ui/profileCard";
 import "../assets/styles/grid.css";
+
 
 const ProfilePage = () => {
     const [profileData, setProfileData] = useState(null);
@@ -74,9 +74,15 @@ const ProfilePage = () => {
                     isElite={profileData.is_elite}
                 />
 
+
+
                 {profileData.gdz_list.map((gdz) => {
                     const subject = gdz.category?.split('_').pop() || "Без предмета";
                     return (
+                        <Link
+                            to={`/gdz/${gdz.id}`}
+                            key={gdz.id}
+                        >
                         <HomeWorkPanel
                             key={gdz.id}
                             subject={subject}
@@ -86,6 +92,7 @@ const ProfilePage = () => {
                             isElite={gdz.is_elite}
                             gdzId={gdz.id}
                         />
+                        </Link>
                     );
                 })}
             </div>
