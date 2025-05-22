@@ -56,7 +56,9 @@ const HomeWorkPanel = ({ number, taskText, price, tag, hwid }) => {
     if (price !== 0) {
       const newNonce = await generateNonce();
       if (!newNonce) {
-        setError("Не удалось загрузить форму оплаты. Пожалуйста, войдите в систему или попробуйте снова.");
+        setError(
+          "Не удалось загрузить форму оплаты. Пожалуйста, войдите в систему или попробуйте снова."
+        );
         return;
       }
       setNonce(newNonce);
@@ -84,7 +86,12 @@ const HomeWorkPanel = ({ number, taskText, price, tag, hwid }) => {
         ) : showGdz || price === 0 ? (
           <PreviewHomework gdzId={number} setActive={closeModal} />
         ) : nonce ? (
-          <PaymentForm nonce={nonce} gdzId={number} onClose={closeModal} onSuccess={handlePaymentSuccess} />
+          <PaymentForm
+            nonce={nonce}
+            gdzId={number}
+            onClose={closeModal}
+            onSuccess={handlePaymentSuccess}
+          />
         ) : (
           <div>Загрузка формы оплаты...</div>
         )}

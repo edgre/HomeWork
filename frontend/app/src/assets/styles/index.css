@@ -26,6 +26,8 @@ body {
   color: var(--clr-dark);
 }
 
+
+
 .container {
   max-width: clac(var(--container-width + var(--container-padding-x) * 2));
   margin-inline: auto;
