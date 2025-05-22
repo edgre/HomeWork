@@ -1,6 +1,7 @@
 import React, { createContext, useState, useEffect, useCallback } from 'react';
 
 /**
+ * @typedef {number} id
  * @typedef {Object} User
  * @property {string} username - Логин пользователя
  * @property {string|null} realname - Полное имя (может отсутствовать)
@@ -34,8 +35,9 @@ export const UserProvider = ({ children }) => {
       const data = await response.json();
 
       return {
-        username: data.username || 'Гость',
-        realname: data.realname || null,
+        id: data.id,
+        username: data.username,
+        realname: data.realname,
         rating: data.rating ? parseFloat(data.rating) : null,
       };
     } catch (err) {

@@ -1,5 +1,6 @@
 import os
 from fastapi import FastAPI, HTTPException, Depends, UploadFile
+from fastapi.responses import FileResponse
 from fastapi.security import OAuth2PasswordBearer, OAuth2PasswordRequestForm
 from passlib.context import CryptContext
 from sqlalchemy import select
@@ -11,8 +12,8 @@ import sqlalchemy.orm as orm
 import models
 import schemas
 import database as _db
-
 from schemas import User, UserInDB, Token
+from pathlib import Path
 
 app = FastAPI()
 SECRET_KEY = os.environ.get("JWT_SECRET_KEY", os.urandom(32).hex())
@@ -37,15 +38,23 @@ def get_db():
 def get_password_hash(password):
     return pwd_context.hash(password)
 
-async def get_user (db: orm.Session(), username: str):
-   return db.query(models.User).filter(models.User.username == username).first()
-
-
 async def authenticate_user(db: orm.Session, username: str, password: str):
     user = await get_user(db, username)
     if (not user) or (not await verify_password(password, user.password_hash)):
         return False
     return user
+
+async def verify_password(plain_password, hashed_password):
+    return pwd_context.verify(plain_password, hashed_password)
+
+async def create_access_token(user: models.User, expires_delta: timedelta | None = None):
+    user_obj = schemas.UserInDB.from_orm(user)
+    expire = datetime.utcnow() + (expires_delta or timedelta(minutes=15))
+    payload = user_obj.dict()
+    payload["exp"] = expire
+    token = jwt.encode(payload, SECRET_KEY)
+    token = jwt.encode(payload, SECRET_KEY, algorithm="HS256")
+    return {"access_token": token}
 
 async def get_current_user(
     db: orm.Session = Depends(get_db),
@@ -60,18 +69,9 @@ async def get_current_user(
             status_code=401, detail="Invalid JWT token")
     return schemas.UserInDB.from_orm(user)
 
-async def verify_password(plain_password, hashed_password):
-    return pwd_context.verify(plain_password, hashed_password)
+async def get_user (db: orm.Session(), username: str):
+   return db.query(models.User).filter(models.User.username == username).first()
 
-
-async def create_access_token(user: models.User, expires_delta: timedelta | None = None):
-    user_obj = schemas.UserInDB.from_orm(user)
-    expire = datetime.utcnow() + (expires_delta or timedelta(minutes=15))
-    payload = user_obj.dict()
-    payload["exp"] = expire
-    token = jwt.encode(payload, SECRET_KEY)
-    token = jwt.encode(payload, SECRET_KEY, algorithm="HS256")
-    return {"access_token": token}
 
 async def create_user(db: orm.Session(), user: schemas.UserCreate):
     user_obj = models.User(
@@ -85,40 +85,52 @@ async def create_user(db: orm.Session(), user: schemas.UserCreate):
     return user_obj
 
 
+async def save_uploaded_file(file: UploadFile, upload_dir: str = "media") -> str:
+    Path(upload_dir).mkdir(parents=True, exist_ok=True)
+    # Получаем оригинальное расширение файла или используем .png по умолчанию
+    file_ext = file.filename.split('.')[-1] if '.' in file.filename else 'png'
+    if file_ext in ['png', 'jpg', 'jpeg', 'webp']:  # Можно расширить список допустимых форматов
+
+        filename = f"{uuid4()}.{file_ext}"
+        filepath = os.path.join(upload_dir, filename)
+
+        # Асинхронно сохраняем файл
+        try:
+            async with aiofiles.open(filepath, "wb") as buffer:
+                while chunk := await file.read(1024 * 1024):  # Читаем по 1MB за раз
+                    await buffer.write(chunk)
+        except Exception as e:
+            raise HTTPException(500, detail=f"Ошибка при сохранении файла: {str(e)}")
+        path = f'images/{filename}'
+        print(path)
+        return path
+
+async def get_image(
+    name: str
+):
+    print(name)
+    return FileResponse(f"media/{name}", headers={"Cache-Control": "no-cache"})
+
+
 async def create_gdz(
         db: orm.Session,
         gdz_data: schemas.GDZCreate,
         file_content: UploadFile,
         owner_id: str
 ):
-    print("a")
-
     try:
-        # Генерируем уникальное имя файла
-        file_ext = "png"
-        filename = f"{uuid4()}.{file_ext}"
-
-        filename = str(uuid4())
-        while db.query(models.GDZ).filter_by(content=filename).first() != None:
-            filename = str(uuid4())
-
-        filepath = f"media/{filename}"
-
-        # Асинхронно сохраняем файл
-        async with aiofiles.open(filepath, "wb") as buffer:
-            while chunk := await file_content.read(1024 * 1024):
-                await buffer.write(chunk)
+        # Сохраняем файл
+        filename = await save_uploaded_file(file_content)
 
         # Создаем запись в БД
         gdz = models.GDZ(
             description=gdz_data.description,
-            full_description =  gdz_data.full_description,
+            full_description=gdz_data.full_description,
             category=gdz_data.category,
-            # is_elite=gdz_data.is_elite,
             owner_id=owner_id,
             content=filename,
             content_text=gdz_data.content_text,
-            price = gdz_data.price
+            price=gdz_data.price
         )
 
         db.add(gdz)
@@ -126,8 +138,11 @@ async def create_gdz(
         db.refresh(gdz)
         return gdz
 
+    except HTTPException:
+        raise  # Пробрасываем уже обработанные ошибки
     except Exception as e:
-        raise HTTPException(500, detail=f"Ошибка при сохранении: {str(e)}")
+        db.rollback()
+        raise HTTPException(500, detail=f"Ошибка при создании записи: {str(e)}")
 
 
 async def get_gdz_by_id(
@@ -150,6 +165,10 @@ async def get_all_gdz_sorted_by_rating(db: orm.Session, descending: bool = True)
 
 async def get_gdz_by_owner(db: orm.Session, user_id: int):
     return db.query(models.GDZ).filter(models.GDZ.owner_id == user_id).all()
+
+async def is_gdz_free(db: orm.Session, gdz_id: int):
+    gdz = await get_gdz_by_id(db, gdz_id)
+    return gdz and gdz.price == 0
 
 
 async def get_user_purchases(db: orm.Session, user_id: int):

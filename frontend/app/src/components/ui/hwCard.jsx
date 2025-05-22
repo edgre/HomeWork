@@ -14,23 +14,24 @@ const HomeworkCard = ({
   taskText,
   taskTextFull,
   price,
-  tag,
+  //tag,
   rating = "N/A",
 }) => {
+
   const [modalActive, setModalActive] = useState(false);
+  console.log({ number, taskText, taskTextFull, price, rating });
   return (
     <div className="hwPanel">
       {price == 0 ? (
         <Modal active={modalActive} setActive={setModalActive}>
           <PreviewHomework
-            taskTextFull={"Полное описание задачи"}
+           gdzId={number}
             setActive={setModalActive}
           />
         </Modal>
       ) : (
         <Modal active={modalActive} setActive={setModalActive}>
-          {/* здесь нужно генерить нонсы */}
-          <PaymentForm nonce="12b71v80n4c2j" />
+
         </Modal>
       )}
       <div className="category-left-box">

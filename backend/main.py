@@ -1,3 +1,5 @@
+import random
+
 from fastapi import FastAPI, HTTPException, Depends, security, Request, UploadFile, File, Form
 from typing import List, Dict
 from fastapi.middleware.cors import CORSMiddleware
@@ -55,7 +57,7 @@ async def username(form_data: security.OAuth2PasswordRequestForm = Depends(), db
     return await services.create_access_token(user)
 
 
-@app.get("/users/me", response_model=schemas.User)
+@app.get("/users/me", response_model=schemas.UserInDB)
 async def get_user(user: schemas.User = Depends(services.get_current_user)):
     return user
 
@@ -96,6 +98,21 @@ async def get_profile_data(
         "gdz_list": gdz_list
     }
 
+@app.get("/subjects/{category}", response_model=List[Dict[str, str]])
+def get_subjects_by_category(
+    category: str,
+    db: Session = Depends(get_db)
+):
+    subjects = db.query(
+        models.Subjects.subject_name,
+        models.Subjects.paths
+    ).filter(
+        models.Subjects.category == category
+    ).all()
+    return [
+        {"subject_name": subject.subject_name, "slug": subject.paths}
+        for subject in subjects
+    ]
 
 @app.post("/gdz/create")
 async def create_gdz_en(
@@ -113,43 +130,6 @@ async def create_gdz_en(
         print(f"Ошибка валидации: {e}")
         raise
     return await services.create_gdz(db, gdz_data, content_file, owner_id=current_user.id)
-
-
-@app.get("/subjects/{category}", response_model=List[Dict[str, str]])
-def get_subjects_by_category(
-    category: str,
-    db: Session = Depends(get_db)
-):
-    subjects = db.query(
-        models.Subjects.subject_name,
-        models.Subjects.paths
-    ).filter(
-        models.Subjects.category == category
-    ).all()
-    return [
-        {"subject_name": subject.subject_name, "slug": subject.paths}
-        for subject in subjects
-    ]
-
-
-# @app.get("/gdz/", response_model=list[schemas.GDZPublic])
-# def get_all_gdz(db: Session = Depends(get_db)):
-#     return db.query(models.GDZ).all()
-
-# @app.get("/gdz/sorted", response_model=list[schemas.GDZPublic])
-# async def get_sorted_gdz(db: Session = Depends(get_db)):
-#     result = db.execute(
-#         select(models.GDZ)
-#         .order_by(models.GDZ.rating.desc())
-#         .limit(10)
-#     )
-#     gdz_list = result.scalars().all()
-#
-#     # Отладочная печать
-#     for gdz in gdz_list:
-#         print(f"ID: {gdz.id}, Rating: {gdz.rating}, Desc: {gdz.description}")
-#
-#     return gdz_list
 
 
 @app.get("/gdz_category/{category}", response_model=list[schemas.GDZPublicShort])
@@ -181,7 +161,6 @@ async def get_gdz_full(
         db: Session = Depends(get_db),
         current_user: models.User = Depends(services.get_current_user)
 ):
-    # Проверяем права доступа
     gdz = await services.get_gdz_by_id(db, gdz_id)
     if not gdz:
         raise HTTPException(status_code=404, detail="ГДЗ не найдено")
@@ -199,7 +178,17 @@ async def get_gdz_full(
     return gdz
 
 
-@app.post("/gdz/{gdz_id}/purchase", status_code=201)
+@app.get("/images/{image_name}")
+async def get_image(
+    image_name: str,
+    db: orm.Session = Depends(services.get_db)
+):
+    return await services.get_image(name=image_name)
+
+from fastapi import HTTPException, Depends, status
+from sqlalchemy.orm import Session
+
+@app.post("/gdz/{gdz_id}/purchase", status_code=status.HTTP_201_CREATED)
 async def purchase_gdz(
         gdz_id: int,
         db: Session = Depends(get_db),
@@ -210,35 +199,44 @@ async def purchase_gdz(
     if not gdz:
         raise HTTPException(status_code=404, detail="ГДЗ не найдено")
 
-    # Проверяем, не куплено ли уже
+    # Проверяем, куплено ли ГДЗ
     existing_purchase = await services.get_purchase(db, current_user.id, gdz_id)
     if existing_purchase:
         raise HTTPException(status_code=400, detail="Вы уже приобрели это ГДЗ")
 
-    # Определяем тип ГДЗ (бесплатное/платное)
-    if gdz.price==0:  # Добавьте это поле в модель GDZ
-        purchase = models.Purchase(
-            buyer_id=current_user.id,
-            gdz_id=gdz_id,
-        )
-        db.add(purchase)
-        db.commit()
-        db.refresh(purchase)
-        return {"message": "Бесплатное ГДЗ успешно получено", "gdz_id": gdz_id}
-    else:
-        confirmation_code = 5578
+    # Проверяем, бесплатное ли ГДЗ
+    is_free = await services.is_gdz_free(db, gdz_id)
+    if is_free:
+        raise HTTPException(status_code=400, detail="Бесплатное ГДЗ не требует покупки")
 
+    # Генерируем код подтверждения
+    confirmation_code = random.randint(1, 1000)
+
+    # Ищем существующую запись в таблице Codes
+    existing_code = db.query(models.Codes).filter(
+        models.Codes.user_id == current_user.id,
+        models.Codes.gdz_id == gdz_id
+    ).first()
+
+    if existing_code:
+        # Если запись существует, обновляем поле code
+        existing_code.code = confirmation_code
+        db.commit()
+        db.refresh(existing_code)
+    else:
+        # Если записи нет, создаем новую
         code = models.Codes(
-            user_id = current_user.id,
-            gdz_id = gdz_id,
-            code =  confirmation_code
+            user_id=current_user.id,
+            gdz_id=gdz_id,
+            code=confirmation_code
         )
         db.add(code)
         db.commit()
         db.refresh(code)
-        return {
-            "confirmation_code": confirmation_code,
-        }
+
+    return {
+        "confirmation_code": confirmation_code,
+    }
 
 
 @app.post("/gdz/{gdz_id}/confirm-purchase", status_code=201)
@@ -259,15 +257,17 @@ async def confirm_purchase(
         db.commit()
         db.refresh(purchase)
 
+        print("добавлено")
         return {"message": "Покупка подтверждена", "gdz_id": gdz_id}
     else:
-            print("ошибка")
+        raise HTTPException(status_code=400, detail="Введено неверное значение")
+
 
 @app.post("/gdz/rate")
 async def rate_gdz(
-    rating: schemas.GDZRatingIn,
-    db: Session = Depends(get_db),
-    current_user: models.User = Depends(services.get_current_user)
+        rating: schemas.GDZRatingIn,
+        db: Session = Depends(get_db),
+        current_user: models.User = Depends(services.get_current_user)
 ):
     # Получаем ГДЗ со связью с владельцем
     gdz = (
@@ -278,6 +278,29 @@ async def rate_gdz(
     )
     if not gdz:
         raise HTTPException(404, "ГДЗ не найдено")
+
+    # Проверяем, что пользователь не владелец
+    if gdz.owner_id == current_user.id:
+        raise HTTPException(
+            status_code=400,
+            detail="Вы не можете оценивать свои ГДЗ"
+        )
+
+    # Проверяем, не оценивал ли уже пользователь это ГДЗ
+    existing_rating = (
+        db.query(models.GDZRating)
+        .filter_by(
+            gdz_id=rating.gdz_id,
+            user_id=current_user.id
+        )
+        .first()
+    )
+
+    if existing_rating:
+        raise HTTPException(
+            status_code=400,
+            detail="Вы уже оценивали это ГДЗ"
+        )
 
     # Создаем оценку
     new_rating = models.GDZRating(
@@ -295,7 +318,6 @@ async def rate_gdz(
         "detail": "Оценка добавлена",
         "owner_rating": gdz.user.user_rating
     }
-
 
 @app.get("/")
 async def root():
