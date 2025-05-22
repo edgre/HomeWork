@@ -19,6 +19,7 @@ const PreviewHomework = ({ gdzId, onClose, flagToNotSetRating = 0, isStandaloneP
         error: null
     });
 
+    const [isLoading, setIsLoading] = useState(true);
     const [userRating, setUserRating] = useState(0);
     const [isRatingSubmitting, setIsRatingSubmitting] = useState(false);
     const navigate = useNavigate();
@@ -121,7 +122,7 @@ const PreviewHomework = ({ gdzId, onClose, flagToNotSetRating = 0, isStandaloneP
     return (
         <div className="auth-form-container">
             <h2 className="bold">Задача</h2>
-            <h4>{data.photoUrl}</h4>
+            <h4>{data.taskText}</h4>
             <h2 className="bold">Решение</h2>
             <div className="photo-container">
                 {data.isLoading && <div className="photo-loader">Загрузка...</div>}

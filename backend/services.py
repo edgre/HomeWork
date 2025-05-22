@@ -38,15 +38,23 @@ def get_db():
 def get_password_hash(password):
     return pwd_context.hash(password)
 
-async def get_user (db: orm.Session(), username: str):
-   return db.query(models.User).filter(models.User.username == username).first()
-
-
 async def authenticate_user(db: orm.Session, username: str, password: str):
     user = await get_user(db, username)
     if (not user) or (not await verify_password(password, user.password_hash)):
         return False
     return user
+
+async def verify_password(plain_password, hashed_password):
+    return pwd_context.verify(plain_password, hashed_password)
+
+async def create_access_token(user: models.User, expires_delta: timedelta | None = None):
+    user_obj = schemas.UserInDB.from_orm(user)
+    expire = datetime.utcnow() + (expires_delta or timedelta(minutes=15))
+    payload = user_obj.dict()
+    payload["exp"] = expire
+    token = jwt.encode(payload, SECRET_KEY)
+    token = jwt.encode(payload, SECRET_KEY, algorithm="HS256")
+    return {"access_token": token}
 
 async def get_current_user(
     db: orm.Session = Depends(get_db),
@@ -61,18 +69,9 @@ async def get_current_user(
             status_code=401, detail="Invalid JWT token")
     return schemas.UserInDB.from_orm(user)
 
-async def verify_password(plain_password, hashed_password):
-    return pwd_context.verify(plain_password, hashed_password)
+async def get_user (db: orm.Session(), username: str):
+   return db.query(models.User).filter(models.User.username == username).first()
 
-
-async def create_access_token(user: models.User, expires_delta: timedelta | None = None):
-    user_obj = schemas.UserInDB.from_orm(user)
-    expire = datetime.utcnow() + (expires_delta or timedelta(minutes=15))
-    payload = user_obj.dict()
-    payload["exp"] = expire
-    token = jwt.encode(payload, SECRET_KEY)
-    token = jwt.encode(payload, SECRET_KEY, algorithm="HS256")
-    return {"access_token": token}
 
 async def create_user(db: orm.Session(), user: schemas.UserCreate):
     user_obj = models.User(
@@ -166,6 +165,11 @@ async def get_all_gdz_sorted_by_rating(db: orm.Session, descending: bool = True)
 
 async def get_gdz_by_owner(db: orm.Session, user_id: int):
     return db.query(models.GDZ).filter(models.GDZ.owner_id == user_id).all()
+
+async def is_gdz_free(db: orm.Session, gdz_id: int):
+    gdz = await get_gdz_by_id(db, gdz_id)
+    return gdz and gdz.price == 0
+
 
 async def get_user_purchases(db: orm.Session, user_id: int):
     stmt = (

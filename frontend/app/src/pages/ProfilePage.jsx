@@ -79,10 +79,7 @@ const ProfilePage = () => {
                 {profileData.gdz_list.map((gdz) => {
                     const subject = gdz.category?.split('_').pop() || "Без предмета";
                     return (
-                        <Link
-                            to={`/gdz/${gdz.id}`}
-                            key={gdz.id}
-                        >
+
                         <HomeWorkPanel
                             key={gdz.id}
                             subject={subject}
@@ -92,7 +89,6 @@ const ProfilePage = () => {
                             isElite={gdz.is_elite}
                             gdzId={gdz.id}
                         />
-                        </Link>
                     );
                 })}
             </div>

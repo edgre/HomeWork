@@ -1,3 +1,5 @@
+import random
+
 from fastapi import FastAPI, HTTPException, Depends, security, Request, UploadFile, File, Form
 from typing import List, Dict
 from fastapi.middleware.cors import CORSMiddleware
@@ -159,7 +161,6 @@ async def get_gdz_full(
         db: Session = Depends(get_db),
         current_user: models.User = Depends(services.get_current_user)
 ):
-    # Проверяем права доступа
     gdz = await services.get_gdz_by_id(db, gdz_id)
     if not gdz:
         raise HTTPException(status_code=404, detail="ГДЗ не найдено")
@@ -176,6 +177,7 @@ async def get_gdz_full(
 
     return gdz
 
+
 @app.get("/images/{image_name}")
 async def get_image(
     image_name: str,
@@ -183,34 +185,58 @@ async def get_image(
 ):
     return await services.get_image(name=image_name)
 
-@app.post("/gdz/{gdz_id}/purchase", status_code=201)
+from fastapi import HTTPException, Depends, status
+from sqlalchemy.orm import Session
+
+@app.post("/gdz/{gdz_id}/purchase", status_code=status.HTTP_201_CREATED)
 async def purchase_gdz(
         gdz_id: int,
         db: Session = Depends(get_db),
         current_user: models.User = Depends(services.get_current_user)
 ):
+    # Проверяем существование ГДЗ
     gdz = await services.get_gdz_by_id(db, gdz_id)
     if not gdz:
         raise HTTPException(status_code=404, detail="ГДЗ не найдено")
-    # Проверяем, не куплено ли уже
+
+    # Проверяем, куплено ли ГДЗ
     existing_purchase = await services.get_purchase(db, current_user.id, gdz_id)
     if existing_purchase:
         raise HTTPException(status_code=400, detail="Вы уже приобрели это ГДЗ")
 
-    else:
-        confirmation_code = 5578
+    # Проверяем, бесплатное ли ГДЗ
+    is_free = await services.is_gdz_free(db, gdz_id)
+    if is_free:
+        raise HTTPException(status_code=400, detail="Бесплатное ГДЗ не требует покупки")
 
+    # Генерируем код подтверждения
+    confirmation_code = random.randint(1, 1000)
+
+    # Ищем существующую запись в таблице Codes
+    existing_code = db.query(models.Codes).filter(
+        models.Codes.user_id == current_user.id,
+        models.Codes.gdz_id == gdz_id
+    ).first()
+
+    if existing_code:
+        # Если запись существует, обновляем поле code
+        existing_code.code = confirmation_code
+        db.commit()
+        db.refresh(existing_code)
+    else:
+        # Если записи нет, создаем новую
         code = models.Codes(
-            user_id = current_user.id,
-            gdz_id = gdz_id,
-            code =  confirmation_code
-            )
+            user_id=current_user.id,
+            gdz_id=gdz_id,
+            code=confirmation_code
+        )
         db.add(code)
         db.commit()
         db.refresh(code)
-        return {
-            "confirmation_code": confirmation_code,
-        }
+
+    return {
+        "confirmation_code": confirmation_code,
+    }
 
 
 @app.post("/gdz/{gdz_id}/confirm-purchase", status_code=201)
@@ -231,9 +257,10 @@ async def confirm_purchase(
         db.commit()
         db.refresh(purchase)
 
+        print("добавлено")
         return {"message": "Покупка подтверждена", "gdz_id": gdz_id}
     else:
-            print("ошибка")
+        raise HTTPException(status_code=400, detail="Введено неверное значение")
 
 
 @app.post("/gdz/rate")
@@ -256,7 +283,7 @@ async def rate_gdz(
     if gdz.owner_id == current_user.id:
         raise HTTPException(
             status_code=400,
-            detail="Вы не можете оценивать свои собственные ГДЗ"
+            detail="Вы не можете оценивать свои ГДЗ"
         )
 
     # Проверяем, не оценивал ли уже пользователь это ГДЗ

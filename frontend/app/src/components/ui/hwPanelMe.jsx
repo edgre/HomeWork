@@ -6,13 +6,13 @@ import "../../assets/styles/headers.css";
 import "../../assets/styles/grid.css";
 import "../../assets/styles/text.css";
 
-const HomeWorkPanel = ({ subject, taskText }) => {
+const HomeWorkPanel = ({ subject, taskText, gdzId }) => {
     const [modalActive, setModalActive] = useState(false);
 
     return (
         <div className="hwPanel">
             <Modal active={modalActive} setActive={setModalActive}>
-                <PreviewHomework taskTextFull={taskText} />
+                <PreviewHomework gdzId={gdzId} />
             </Modal>
 
             <div className="taskText">
