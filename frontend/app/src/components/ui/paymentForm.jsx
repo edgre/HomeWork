@@ -48,10 +48,6 @@ const PaymentForm = ({ nonce, gdzId, onClose, onSuccess }) => {
                 onSuccess();
             }
 
-            // Закрываем форму через 2 секунды, если передан onClose
-            if (onClose) {
-                setTimeout(() => onClose(), 2000);
-            }
         } catch (err) {
             setError(err.message);
         } finally {
