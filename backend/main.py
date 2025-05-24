@@ -1,5 +1,3 @@
-import random
-
 from fastapi import FastAPI, HTTPException, Depends, security, Request, UploadFile, File, Form
 from typing import List, Dict
 from fastapi.middleware.cors import CORSMiddleware
@@ -11,6 +9,7 @@ import schemas
 from typing import List, Dict, Union
 from fastapi import Depends
 from sqlalchemy.orm import Session
+from pathlib import Path
 
 app = FastAPI()
 
@@ -73,10 +72,9 @@ async def get_profile_data(
 
     # Получаем ГДЗ пользователя
     created_gdz = db.query(models.GDZ).filter(models.GDZ.owner_id == user.id).all()
-    purchased_gdz = await services.get_user_purchases(db, user.id)
     gdz_list = []
 
-    for gdz in created_gdz + purchased_gdz:
+    for gdz in created_gdz:
         gdz_list.append({
             "id": gdz.id,
             "description": gdz.description,
@@ -84,7 +82,6 @@ async def get_profile_data(
             "content": gdz.content,
             "content_text": gdz.content_text,
             "price": gdz.price,
-            "rating": gdz.rating,
             "is_elite": gdz.is_elite,
             "owner_id": gdz.owner_id == user.id
 
@@ -98,7 +95,13 @@ async def get_profile_data(
         "gdz_list": gdz_list
     }
 
-@app.get("/subjects/{category}", response_model=List[Dict[str, str]])
+@app.get("/category", response_model=List[str])
+async def get_subjects(db: Session = Depends(get_db)):
+    subjects = db.query(models.Subjects.category).distinct().all()
+    return [subject[0] for subject in subjects]
+
+
+@app.get("/subjects/{category}", response_model=List[str])
 def get_subjects_by_category(
     category: str,
     db: Session = Depends(get_db)
@@ -109,10 +112,7 @@ def get_subjects_by_category(
     ).filter(
         models.Subjects.category == category
     ).all()
-    return [
-        {"subject_name": subject.subject_name, "slug": subject.paths}
-        for subject in subjects
-    ]
+    return [ subject.subject_name for subject in subjects]
 
 @app.post("/gdz/create")
 async def create_gdz_en(
@@ -122,7 +122,7 @@ async def create_gdz_en(
         current_user=Depends(services.get_current_user)
 ):
     try:
-        print(f"Получен файл: {content_file.filename}")  # Проверяем получение файла
+        print(f"Получен файл: {content_file.filename}")
         print(f"Размер файла: {content_file.size}")
         gdz_data = schemas.GDZCreate.model_validate_json(gdz_str)
         print(gdz_data)
@@ -132,27 +132,36 @@ async def create_gdz_en(
     return await services.create_gdz(db, gdz_data, content_file, owner_id=current_user.id)
 
 
+
+
+
 @app.get("/gdz_category/{category}", response_model=list[schemas.GDZPublicShort])
-def get_gdz_by_category(category: str, db: Session = Depends(get_db)):
+async def get_gdz_by_category(
+        category: str,
+        current_user: models.User = Depends(services.get_current_user),
+        db: Session = Depends(get_db)):
     tasks = ((db.query(models.GDZ)
      .filter(models.GDZ.category == category))
      .all())
-    return [
+    res = [
             {
                 "id": task.id,
                 "description": task.description,
                 "price": task.price,
-                # Добавьте другие необходимые поля
+                "owner_id": task.owner_id,
+                "has_purchased": await services.get_purchase(db, current_user.id, task.id) is not None
             }
             for task in tasks
         ]
+    print(res)
+    return(res)
 
-@app.get("/gdz/{gdz_id}", response_model=schemas.GDZPublic)
-async def get_gdz_by_id(gdz_id: int, db: Session = Depends(get_db)):
-    gdz = await services.get_gdz_by_id(db, gdz_id)
-    if not gdz:
-        raise HTTPException(status_code=404, detail="ГДЗ не найдено")
-    return gdz
+# @app.get("/gdz/{gdz_id}", response_model=schemas.GDZPublic)
+# async def get_gdz_by_id(gdz_id: int, db: Session = Depends(get_db)):
+#     gdz = await services.get_gdz_by_id(db, gdz_id)
+#     if not gdz:
+#         raise HTTPException(status_code=404, detail="ГДЗ не найдено")
+#     return gdz
 
 
 @app.get("/gdz/{gdz_id}/full", response_model=schemas.GDZPrivate)
@@ -166,10 +175,11 @@ async def get_gdz_full(
         raise HTTPException(status_code=404, detail="ГДЗ не найдено")
 
     # Проверяем, является ли пользователь владельцем или покупателем
+    is_free = gdz.price==0
     is_owner = gdz.owner_id == current_user.id
     has_purchased = await services.get_purchase(db, current_user.id, gdz_id) is not None
 
-    if not (is_owner or has_purchased):
+    if not (is_free or is_owner or has_purchased):
         raise HTTPException(
             status_code=403,
             detail="Купи сначала"
@@ -194,12 +204,9 @@ async def purchase_gdz(
         db: Session = Depends(get_db),
         current_user: models.User = Depends(services.get_current_user)
 ):
-    # Проверяем существование ГДЗ
     gdz = await services.get_gdz_by_id(db, gdz_id)
     if not gdz:
         raise HTTPException(status_code=404, detail="ГДЗ не найдено")
-
-    # Проверяем, куплено ли ГДЗ
     existing_purchase = await services.get_purchase(db, current_user.id, gdz_id)
     if existing_purchase:
         raise HTTPException(status_code=400, detail="Вы уже приобрели это ГДЗ")
@@ -210,7 +217,7 @@ async def purchase_gdz(
         raise HTTPException(status_code=400, detail="Бесплатное ГДЗ не требует покупки")
 
     # Генерируем код подтверждения
-    confirmation_code = random.randint(1, 1000)
+    confirmation_code = await services.create_code()
 
     # Ищем существующую запись в таблице Codes
     existing_code = db.query(models.Codes).filter(
@@ -318,6 +325,56 @@ async def rate_gdz(
         "detail": "Оценка добавлена",
         "owner_rating": gdz.user.user_rating
     }
+
+@app.post("/gdz/save_draft", response_model=schemas.DraftResponse)
+async def save_draft(
+        gdz_str: str = Form(...),
+        content_file: UploadFile = File(None),
+        db: orm.Session = Depends(services.get_db),
+        current_user: models.User = Depends(services.get_current_user)
+):
+    draft_data = schemas.DraftData.model_validate_json(gdz_str)
+    try:
+        draft = await services.create_or_update_draft(
+            db=db,
+            owner_id=current_user.id,
+            draft_data=draft_data,
+            file=content_file
+        )
+        return {
+            "draft_id": draft.id,
+            "file_path": draft.file_path
+        }
+    except Exception as e:
+        db.rollback()
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.get("/gdz/get_draft", response_model=schemas.DraftData)
+async def get_draft(
+        db: orm.Session = Depends(services.get_db),
+        current_user: models.User = Depends(services.get_current_user)
+):
+    draft = db.query(models.GDZDraft).filter_by(owner_id=current_user.id).first()
+
+    if not draft:
+        raise HTTPException(status_code=404, detail="Черновик не найден")
+
+    data = await services.read_draft_from_file(Path(draft.file_path))
+
+    if data.get("owner_id") != current_user.id:
+        raise HTTPException(status_code=403, detail="Вы не можете смотреть чужие черновики")
+
+    return schemas.DraftData(
+        description=data.get("description"),
+        category=data.get("category"),
+        subject = data.get("subject"),
+        content_text=data.get("content_text"),
+        price=data.get("price"),
+        is_elite=data.get("is_elite"),
+        gdz_id=data.get("gdz_id")
+    )
+
 
 @app.get("/")
 async def root():

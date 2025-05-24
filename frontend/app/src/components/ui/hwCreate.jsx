@@ -1,4 +1,5 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
 import "../../assets/styles/font.css";
 import "../../assets/styles/buttons.css";
 import "../../assets/styles/colors.css";
@@ -9,7 +10,6 @@ import FileUploadButton from "./fileUpload";
 import DropdownList from "./dropdownList";
 
 const HomeworkCreate = () => {
-  // Состояния для формы
   const [selectedCategory, setSelectedCategory] = useState("");
   const [selectedSubcategory, setSelectedSubcategory] = useState("");
   const [shortDescription, setShortDescription] = useState("");
@@ -20,30 +20,128 @@ const HomeworkCreate = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState(null);
 
-  // Обработчик отправки формы
+  const navigate = useNavigate();
+
+  useEffect(() => {
+    const fetchDraft = async () => {
+      const token = localStorage.getItem("access_token");
+      if (!token) {
+        setError("Токен авторизации не найден");
+        return;
+      }
+
+      try {
+        const response = await fetch("/api/gdz/get_draft", {
+          method: "GET",
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        });
+
+        if (!response.ok) {
+          if (response.status === 404) {
+            return;
+          }
+          const errorData = await response.json();
+          throw new Error(errorData.detail || "Ошибка при получении черновика");
+        }
+
+        const draftData = await response.json();
+
+        // Populate form fields with non-empty draft data
+        if (draftData.category) setSelectedCategory(draftData.category);
+        if (draftData.subject) setSelectedSubcategory(draftData.subject);
+        if (draftData.description) setShortDescription(draftData.description);
+        if (draftData.full_description) setFullDescription(draftData.full_description);
+        if (draftData.price !== undefined && draftData.price !== null) setPrice(draftData.price.toString());
+        if (draftData.content_text) setShortAnswer(draftData.content_text);
+        // Note: File is not populated as it requires special handling (e.g., fetching the file from a URL or path)
+      } catch (err) {
+        setError(err.message || "Ошибка при получении черновика");
+      }
+    };
+
+    fetchDraft();
+  }, []); // Empty dependency array to run once on mount
+
+  const saveDraftToServer = async () => {
+    const shouldSave = selectedCategory || selectedSubcategory || shortDescription || fullDescription || price || shortAnswer || file;
+    if (!shouldSave) {
+      return;
+    }
+
+    const token = localStorage.getItem("access_token");
+    if (!token) {
+      return;
+    }
+
+    const formData = new FormData();
+    const draftData = {
+      category: selectedCategory,
+      subject: selectedSubcategory,
+      description: shortDescription,
+      full_description: fullDescription,
+      content_text: shortAnswer,
+      price: parseInt(price) || 0,
+      is_elite: false,
+    };
+    formData.append("gdz_str", JSON.stringify(draftData));
+    if (file) {
+      formData.append("file", file);
+    }
+
+    try {
+      const response = await fetch("/api/gdz/save_draft", {
+        method: "POST",
+        body: formData,
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.message || "Ошибка при сохранении черновика");
+      }
+
+      await response.json();
+    } catch (err) {
+      setError(err.message || "Ошибка при сохранении черновика");
+    }
+  };
+
+  const handleBackClick = async (e) => {
+    e.preventDefault();
+    await saveDraftToServer();
+    navigate("/home");
+  };
+
   const handleSubmit = async (e) => {
     e.preventDefault();
     setIsLoading(true);
     setError(null);
 
-    // Валидация
+    // Validation
     if (!selectedCategory || !selectedSubcategory) {
       setError("Пожалуйста, выберите категорию и предмет");
       setIsLoading(false);
       return;
     }
 
+    // Save draft before submitting
+    await saveDraftToServer();
+
     try {
       const formData = new FormData();
 
-      // Добавляем файл, если он есть
+      // Add file if it exists
       if (file) {
         formData.append("content_file", file);
       }
 
       const combinedCategory = `${selectedCategory}_${selectedSubcategory}`;
 
-      // Создаем объект с данными GDZ
+      // Create GDZ data object
       const gdzData = {
         category: combinedCategory,
         description: shortDescription,
@@ -54,12 +152,12 @@ const HomeworkCreate = () => {
 
       formData.append("gdz_str", JSON.stringify(gdzData));
 
-      // Отправка данных на сервер
-      const response = await fetch("api/gdz/create", {
+      // Send data to server
+      const response = await fetch("/api/gdz/create", {
         method: "POST",
         body: formData,
         headers: {
-          "Authorization": `Bearer ${localStorage.getItem("access_token")}`,
+          Authorization: `Bearer ${localStorage.getItem("access_token")}`,
         },
       });
 
@@ -68,22 +166,23 @@ const HomeworkCreate = () => {
         throw new Error(errorData.message || "Ошибка при создании ГДЗ");
       }
 
-      // Обработка успешного ответа
-      const result = await response.json();
-      console.log("ГДЗ успешно создано:", result);
+      // Handle successful response
+      await response.json();
       alert("ГДЗ успешно опубликовано!");
-      // Здесь можно добавить редирект: navigate('/success');
-
     } catch (err) {
       setError(err.message || "Произошла ошибка при отправке данных");
-      console.error("Ошибка:", err);
     } finally {
       setIsLoading(false);
     }
   };
 
   return (
-    <div className="auth-form-container" style={{ marginTop: "42px" }}>
+    <div className="auth-form-container" style={{ marginTop: "42px", position: "relative" }}>
+      {/* Back button */}
+      <a href="/home" className="back-button" onClick={handleBackClick}>
+        ←
+      </a>
+
       <h1 className="h1" style={{ verticalAlign: "center", justifyContent: "center" }}>
         Создание своего ГДЗ
       </h1>
@@ -98,6 +197,8 @@ const HomeworkCreate = () => {
         <DropdownList
           onCategoryChange={setSelectedCategory}
           onSubcategoryChange={setSelectedSubcategory}
+          initialCategory={selectedCategory}
+          initialSubcategory={selectedSubcategory}
         />
 
         <div className="form-group">

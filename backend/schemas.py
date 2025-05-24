@@ -34,8 +34,11 @@ class GDZCreate(BaseModel):
 
 class GDZPublicShort(BaseModel):
     id:int
+    owner_id: int
     price:int
     description:str
+    has_purchased: bool
+
 
 class GDZPublic(BaseModel):
     id: int
@@ -43,7 +46,6 @@ class GDZPublic(BaseModel):
     description: str
     price: int
     category: str
-    rating: float
     is_elite: bool
 
 class GDZPrivate(GDZPublic):
@@ -55,8 +57,6 @@ class GDZRatingIn(BaseModel):
     gdz_id: int
     value: int  # от 1 до
 
-
-
 class UserProfileResponse(BaseModel):
     username: str
     realname: str
@@ -67,5 +67,20 @@ class UserProfileResponse(BaseModel):
     class Config:
         from_attributes = True
 
+
 class Signature(BaseModel):
     value: int
+
+class DraftData(BaseModel):
+    description: Optional[str] = None
+    full_description: Optional[str] = None
+    category: Optional[str] = None
+    subject: Optional[str] = None
+    content_text: Optional[str] = None
+    price: Optional[float] = None
+    is_elite: Optional[bool] = None
+    gdz_id: Optional[int] = None
+
+class DraftResponse(BaseModel):
+    draft_id: int
+    file_path: str

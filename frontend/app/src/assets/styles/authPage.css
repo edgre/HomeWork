@@ -1,28 +1,54 @@
+/* Контейнер страницы */
 .auth-page-container {
-  display: absolute;
+  display: flex; /* Исправлено с display: absolute */
   justify-content: center;
   align-items: center;
   height: 100vh;
 }
 
+/* Контейнер формы (объединенные стили) */
 .auth-form-container {
   display: grid;
-  flex-direction: column;
   text-align: left;
-  padding-top: 40px;
-  padding-bottom: 40px;
-  padding-right: 60px;
-  padding-left: 60px;
+  padding: 40px 60px; /* Объединено: padding-top, padding-bottom, padding-right, padding-left */
   max-width: 480px;
   align-items: center;
   align-content: center;
   margin: 0 auto;
   background-color: var(--clr-light);
   border-radius: 12px;
-  /* column-gap: 12px; */
   row-gap: 12px;
+  position: relative; /* Для абсолютного позиционирования .back-button */
 }
-/* style={{ columnGapgap: "12px", rowGap: "12px" }} */
+
+/* Кнопка "Назад" */
+a.back-button {
+  position: absolute;
+  top: 16px;
+  left: 16px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  background-color: #f5f5f5; /* Цвет фона, можно заменить на var(--clr-light) */
+  border-radius: 50%;
+  font-size: 24px;
+  color: #000; /* Цвет стрелки, можно заменить на var(--clr-dark) */
+  text-decoration: none !important; /* Убираем подчеркивание */
+  transition: background-color 0.2s, transform 0.2s;
+}
+
+a.back-button:hover {
+  background-color: #e0e0e0; /* Цвет при наведении, можно заменить на var(--clr-grey-1) */
+  transform: scale(1.1);
+}
+
+a.back-button:active {
+  transform: scale(0.95);
+}
+
+/* Контейнер ошибок */
 .auth-error-container {
   position: relative;
   display: flex;
@@ -34,23 +60,27 @@
   background-color: rgb(45, 45, 45);
 }
 
+/* Заголовок страницы */
 .auth-page-title {
   text-align: center;
   margin-bottom: 24px;
   color: var(--clr-dark-a0);
 }
 
+/* Форма */
 .auth-form {
   display: flex;
   align-items: center;
   flex-direction: column;
 }
 
+/* Группа формы */
 .form-group {
   align-items: center;
   margin: 8px;
 }
 
+/* Метка формы */
 .form-label {
   display: block;
   font-size: 14px;
@@ -59,6 +89,7 @@
   margin-bottom: 4px;
 }
 
+/* Кнопка авторизации */
 .auth-button {
   color: #fff;
   border: none;
@@ -73,6 +104,7 @@
   background-color: var(--clr-surface-a10);
 }
 
+/* Переключатель */
 .switch {
   position: relative;
   display: inline-block;
@@ -95,9 +127,7 @@
   left: 0;
   right: 0;
   bottom: 0;
-  gap: auto;
   background-color: var(--clr-grey-1);
-  -webkit-transition: 0.4s;
   transition: 0.4s;
   border-radius: 10px;
 }
@@ -110,7 +140,6 @@
   left: 5px;
   bottom: 4px;
   background-color: var(--clr-grey-2);
-  -webkit-transition: 0.4s;
   transition: 0.4s;
   border-radius: 8px;
   border-width: 0px;
@@ -123,7 +152,6 @@
   font-size: 14px;
   font-weight: 400;
   text-align: center;
-  /* width: 100px; */
   margin-top: 12px;
 }
 
@@ -141,15 +169,15 @@
 
 input:checked + .slider:before {
   --shift: 135px;
-  -webkit-transform: translateX(var(--shift));
-  -ms-transform: translateX(var(--shift));
   transform: translateX(var(--shift));
 }
 
+/* Дополнительные поля ввода */
 .additional-input {
   margin-top: 10px;
 }
 
+/* Поля ввода */
 .inputBox {
   padding: 10px 20px;
   font-size: 16px;

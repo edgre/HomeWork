@@ -6,12 +6,20 @@ import HeaderButtom1 from "../components/ui/buttomHeader1";
 import CapIcon from "../assets/images/GraduationCap.svg";
 import ButtonWithIcon from "../components/ui/iconTextButton.jsx";
 
-// Константы для названий категорий (можно вынести в отдельный файл)
+// Константы для названий категорий
 const CATEGORY_TITLES = {
   laboratoryWorks: "ВУЗ • Лабораторные работы",
   researchWorks: "ВУЗ • Исследовательские работы",
   schoolTasks: "Школьный курс • Задачи",
   universityTasks: "ВУЗ • Задачи"
+};
+
+// Маппинг для строковых значений категорий
+const CATEGORY_NAMES = {
+  laboratoryWorks: "Лабораторные работы",
+  researchWorks: "Научные работы",
+  schoolTasks: "Школьные задачи",
+  universityTasks: "Университетские задачи"
 };
 
 const HomePage = () => {
@@ -50,10 +58,10 @@ const HomePage = () => {
         setLoading(true);
 
         const [labData, researchData, schoolData, universityData] = await Promise.all([
-          fetchSubjects("laboratoryWorks"),
-          fetchSubjects("researchWorks"),
-          fetchSubjects("schoolTasks"),
-          fetchSubjects("universityTasks")
+          fetchSubjects("Лабораторные работы"),
+          fetchSubjects("Научные работы"),
+          fetchSubjects("Школьные задачи"),
+          fetchSubjects("Университетские задачи")
         ]);
 
         setCategories({
@@ -90,8 +98,10 @@ const HomePage = () => {
     Object.values(refs).forEach(ref => setupHorizontalScroll(ref));
   }, []);
 
-  const handleCardClick = (slug) => {
-    navigate(`/category/${slug}`);
+  const handleCardClick = (category, subjectName) => {
+    // Формируем slug как category_subject
+    const combinedSlug = `${category}_${subjectName}`;
+    navigate(`/category/${combinedSlug}`);
   };
 
   if (loading) return <div className="loading">Загрузка...</div>;
@@ -115,17 +125,23 @@ const HomePage = () => {
                     icon={CapIcon}
                     key={index}
                     className="card"
-                    onClick={() => handleCardClick(item.slug)}
+                    onClick={() => handleCardClick(
+                      CATEGORY_NAMES[categoryKey], // Используем строковое значение категории
+                      item // item — строка
+                    )}
                   >
-                    {item.subject_name || item.name}
+                    {item} {/* Отображаем item как строку */}
                   </ButtonWithIcon>
                 ) : (
                   <button
                     key={index}
                     className="card"
-                    onClick={() => handleCardClick(item.slug)}
+                    onClick={() => handleCardClick(
+                      CATEGORY_NAMES[categoryKey], // Используем строковое значение категории
+                      item // item — строка
+                    )}
                   >
-                    {item.subject_name || item.name}
+                    {item} {/* Отображаем item как строку */}
                   </button>
                 )
               ))}

@@ -1,5 +1,6 @@
-import { useState } from "react";
+import { useState, useEffect, useContext } from "react";
 import { useParams, useNavigate } from "react-router-dom";
+import { UserContext } from "../../contexts/UserContext";
 import TooltipText from "./tooltipText";
 import Modal from "./modal";
 import PaymentForm from "./paymentForm";
@@ -8,15 +9,23 @@ import "../../assets/styles/headers.css";
 import "../../assets/styles/grid.css";
 import "../../assets/styles/text.css";
 
-const HomeWorkPanel = ({ number, taskText, price, tag, hwid }) => {
+const HomeWorkPanel = ({ number, taskText, price, ownerId, has_purchased }) => {
   const [modalActive, setModalActive] = useState(false);
   const [nonce, setNonce] = useState(null);
   const [error, setError] = useState(null);
-  const [showGdz, setShowGdz] = useState(false); // Новое состояние для отображения ГДЗ
+  const [showGdz, setShowGdz] = useState(false);
+  const [isOwner, setIsOwner] = useState(false);
   const { slug } = useParams();
   const navigate = useNavigate();
-
+  const { user } = useContext(UserContext);
   const token = localStorage.getItem("access_token");
+
+  // Проверка, является ли пользователь владельцем ГДЗ
+  useEffect(() => {
+    if (user?.id && ownerId === user.id) {
+      setIsOwner(true);
+    }
+  }, [ownerId, user?.id]);
 
   const generateNonce = async () => {
     if (!token) {
@@ -38,7 +47,6 @@ const HomeWorkPanel = ({ number, taskText, price, tag, hwid }) => {
         throw new Error(errorData.detail || "Ошибка генерации nonce");
       }
       const data = await response.json();
-      console.log("API response:", data);
       return data.confirmation_code;
     } catch (error) {
       console.error("Ошибка генерации nonce:", error);
@@ -47,13 +55,16 @@ const HomeWorkPanel = ({ number, taskText, price, tag, hwid }) => {
   };
 
   const handleCardClick = () => {
-    navigate(`/category/${slug}/${hwid}`);
+    navigate(`/category/${slug}/${number}`);
   };
 
   const handleButtonClick = async () => {
     setError(null);
-    setShowGdz(false); // Сбрасываем состояние ГДЗ
-    if (price !== 0) {
+    setShowGdz(false);
+    if (isOwner || price === 0 || has_purchased ) {
+      setShowGdz(true);
+      setModalActive(true);
+    } else {
       const newNonce = await generateNonce();
       if (!newNonce) {
         setError(
@@ -62,20 +73,20 @@ const HomeWorkPanel = ({ number, taskText, price, tag, hwid }) => {
         return;
       }
       setNonce(newNonce);
+      setModalActive(true);
     }
-    setModalActive(true);
   };
 
   const closeModal = () => {
     setModalActive(false);
     setNonce(null);
     setError(null);
-    setShowGdz(false); // Сбрасываем состояние ГДЗ при закрытии
+    setShowGdz(false);
   };
 
   const handlePaymentSuccess = () => {
-    setShowGdz(true); // Показываем ГДЗ после успешной оплаты
-    setNonce(null); // Сбрасываем nonce
+    setShowGdz(true);
+    setNonce(null);
   };
 
   return (
@@ -83,7 +94,7 @@ const HomeWorkPanel = ({ number, taskText, price, tag, hwid }) => {
       <Modal active={modalActive} setActive={closeModal}>
         {error ? (
           <div>{error}</div>
-        ) : showGdz || price === 0 ? (
+        ) : showGdz || isOwner || price === 0 || has_purchased ? (
           <PreviewHomework gdzId={number} setActive={closeModal} />
         ) : nonce ? (
           <PaymentForm
@@ -103,13 +114,13 @@ const HomeWorkPanel = ({ number, taskText, price, tag, hwid }) => {
       </div>
 
       <div style={{ display: "flex", gap: "12px", alignItems: "center" }}>
-        {tag && <div className="taskTag">{tag}</div>}
+{/*         {tag && <div className="taskTag">{tag}</div>} */}
         <button
           className="button"
           style={{ pointerEvents: "auto" }}
           onClick={handleButtonClick}
         >
-          {price === 0 ? "Бесплатно" : price + " руб"}
+          {isOwner ? "Просмотреть ГДЗ": has_purchased ? "Посмотреть ГДЗ" : price === 0 ? "Бесплатно" : price + " руб"}
         </button>
       </div>
     </div>

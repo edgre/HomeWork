@@ -91,7 +91,6 @@ const PaymentForm = ({ nonce, gdzId, onClose, onSuccess }) => {
                 </div>
 
                 {error && <p className="error-text" style={{ color: "red", margin: "10px 0" }}>{error}</p>}
-                {success && <p className="success-text" style={{ color: "green", margin: "10px 0" }}>{success}</p>}
 
                 <div className="form-group">
                     <button

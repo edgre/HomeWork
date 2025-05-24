@@ -1,65 +1,84 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
+import axios from "axios";
 import "../../assets/styles/dropDown.css";
 import "../../assets/styles/authPage.css";
 
-const DropdownList = ({ onCategoryChange, onSubcategoryChange }) => {
-  const [selectedCategory, setSelectedCategory] = useState("");
-  const [selectedSubcategory, setSelectedSubcategory] = useState("");
+const DropdownList = ({ onCategoryChange, onSubcategoryChange, initialCategory, initialSubcategory }) => {
+  const [selectedCategory, setSelectedCategory] = useState(initialCategory || "");
+  const [selectedSubcategory, setSelectedSubcategory] = useState(initialSubcategory || "");
+  const [categories, setCategories] = useState([]);
+  const [subcategories, setSubcategories] = useState([]);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState(null);
 
-  // Категории и подкатегории, где id и name совпадают
-  const categories = [
-    {
-      id: "Научные работы",
-      name: "Научные работы",
-      subcategories: [
-        { id: "Курсовая работа", name: "Курсовая работа" },
-        { id: "Научно-исследовательская работа", name: "Научно-исследовательская работа" },
-        { id: "Диплом", name: "Диплом" },
-        { id: "ВКР", name: "ВКР" },
-      ],
-    },
-    {
-      id: "Лабораторные работы",
-      name: "Лабораторные работы",
-      subcategories: [
-        { id: "Программирование", name: "Программирование" },
-        { id: "Модели безопасности", name: "Модели безопасности" },
-        { id: "Компьютерные сети", name: "Компьютерные сети" },
-        { id: "ТЧМК", name: "ТЧМК" },
-        { id: "Языки программирования", name: "Языки программирования" },
-      ],
-    },
-    {
-      id: "Университетские задачи",
-      name: "ВУЗ задачи",
-      subcategories: [
-        { id: "Мат. анализ", name: "Мат. анализ" },
-        { id: "Экономика", name: "Экономика" },
-        { id: "КМЗИ", name: "КМЗИ" },
-        { id: "Криптография", name: "Криптография" },
-        { id: "Мат. статистика", name: "Мат. статистика" },
-        { id: "Теория вероятности", name: "Теория вероятности" },
-        { id: "Алгебра", name: "Алгебра" },
-        { id: "Программирование", name: "Программирование" },
-      ],
-    },
-    {
-      id: "Школьные задачи",
-      name: "Школа задачи",
-      subcategories: [
-        { id: "Алгебра", name: "Алгебра" },
-        { id: "Геометрия", name: "Геометрия" },
-        { id: "Физика", name: "Физика" },
-        { id: "Информатика", name: "Информатика" },
-      ],
-    },
-  ];
+  // Загрузка категорий при монтировании компонента
+  useEffect(() => {
+    const fetchCategories = async () => {
+      setLoading(true);
+      try {
+        const response = await axios.get("api/category");
+        setCategories(response.data); // Предполагаем, что возвращается массив строк
+        setError(null);
+      } catch (err) {
+        setError("Ошибка при загрузке категорий");
+        console.error(err);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchCategories();
+  }, []);
+
+  // Синхронизация начальных значений
+  useEffect(() => {
+    if (initialCategory && initialCategory !== selectedCategory) {
+      setSelectedCategory(initialCategory);
+      onCategoryChange(initialCategory);
+    }
+    if (initialSubcategory && initialSubcategory !== selectedSubcategory) {
+      setSelectedSubcategory(initialSubcategory);
+      onSubcategoryChange(initialSubcategory);
+    }
+  }, [initialCategory, initialSubcategory, onCategoryChange, onSubcategoryChange]);
+
+  // Загрузка подкатегорий при изменении selectedCategory
+  useEffect(() => {
+    if (selectedCategory) {
+      const fetchSubcategories = async () => {
+        setLoading(true);
+        try {
+          const response = await axios.get(`api/subjects/${selectedCategory}`);
+          setSubcategories(response.data); // Предполагаем, что возвращается массив строк
+          setError(null);
+
+          // Если initialSubcategory есть, но не входит в новый список подкатегорий, сбрасываем её
+          if (initialSubcategory && !response.data.includes(initialSubcategory)) {
+            setSelectedSubcategory("");
+            onSubcategoryChange("");
+          }
+        } catch (err) {
+          setError("Ошибка при загрузке предметов");
+          console.error(err);
+        } finally {
+          setLoading(false);
+        }
+      };
+
+      fetchSubcategories();
+    } else {
+      setSubcategories([]);
+      setSelectedSubcategory("");
+      onSubcategoryChange("");
+    }
+  }, [selectedCategory, initialSubcategory, onSubcategoryChange]);
 
   const handleCategoryChange = (e) => {
     const value = e.target.value;
     setSelectedCategory(value);
-    setSelectedSubcategory("");
+    setSelectedSubcategory(""); // Сбрасываем подкатегорию при смене категории
     onCategoryChange(value);
+    onSubcategoryChange(""); // Сбрасываем подкатегорию в родительском компоненте
   };
 
   const handleSubcategoryChange = (e) => {
@@ -68,10 +87,6 @@ const DropdownList = ({ onCategoryChange, onSubcategoryChange }) => {
     onSubcategoryChange(value);
   };
 
-  const currentSubcategories = selectedCategory
-    ? categories.find((c) => c.id === selectedCategory)?.subcategories || []
-    : [];
-
   return (
     <>
       <div className="form-group">
@@ -79,14 +94,17 @@ const DropdownList = ({ onCategoryChange, onSubcategoryChange }) => {
           className="dropdown-select"
           value={selectedCategory}
           onChange={handleCategoryChange}
+          disabled={loading}
         >
           <option value="">Выберите категорию</option>
           {categories.map((category) => (
-            <option key={category.id} value={category.id}>
-              {category.name}
+            <option key={category} value={category}>
+              {category}
             </option>
           ))}
         </select>
+        {loading && <p>Загрузка...</p>}
+        {error && <p className="error">{error}</p>}
       </div>
 
       <div className="form-group">
@@ -94,16 +112,14 @@ const DropdownList = ({ onCategoryChange, onSubcategoryChange }) => {
           className="dropdown-select"
           value={selectedSubcategory}
           onChange={handleSubcategoryChange}
-          disabled={!selectedCategory}
+          disabled={!selectedCategory || loading}
         >
           <option value="">
-            {selectedCategory
-              ? "Выберите предмет"
-              : "Сначала выберите категорию"}
+            {selectedCategory ? "Выберите предмет" : "Сначала выберите категорию"}
           </option>
-          {currentSubcategories.map((subcategory) => (
-            <option key={subcategory.id} value={subcategory.id}>
-              {subcategory.name}
+          {subcategories.map((subcategory) => (
+            <option key={subcategory} value={subcategory}>
+              {subcategory}
             </option>
           ))}
         </select>
