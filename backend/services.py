@@ -133,13 +133,19 @@ async def create_gdz(
             owner_id=owner_id,
             content=filename,
             content_text=gdz_data.content_text,
-            price=gdz_data.price
+            price=gdz_data.price,
+            is_elite =gdz_data.is_elite
         )
 
         db.add(gdz)
         db.commit()
         db.refresh(gdz)
-      #  await cleanup_old_gdz(db)
+
+        user = db.query(models.User).filter_by(id=owner_id).first()
+        if user.has_draft:
+            await cleanup_draft(db, owner_id)
+
+        await cleanup_old_gdz(db)
         return gdz
 
     except HTTPException:
@@ -155,16 +161,16 @@ async def get_gdz_by_id(
     return db.query(models.GDZ).filter(models.GDZ.id == gdz_id).first()
 
 
-async def get_all_gdz_sorted_by_rating(db: orm.Session, descending: bool = True):
-    stmt = select(models.GDZ).where(models.GDZ.rating.is_not(None))
-
-    if descending:
-        stmt = stmt.order_by(models.GDZ.rating.desc())
-    else:
-        stmt = stmt.order_by(models.GDZ.rating.asc())
-
-    result = await db.execute(stmt)
-    return result.scalars().all()
+# async def get_all_gdz_sorted_by_rating(db: orm.Session, descending: bool = True):
+#     stmt = select(models.GDZ).where(models.GDZ.rating.is_not(None))
+#
+#     if descending:
+#         stmt = stmt.order_by(models.GDZ.rating.desc())
+#     else:
+#         stmt = stmt.order_by(models.GDZ.rating.asc())
+#
+#     result = await db.execute(stmt)
+#     return result.scalars().all()
 
 
 async def get_gdz_by_owner(db: orm.Session, user_id: int):
@@ -228,8 +234,8 @@ def update_user_rating(db: orm.Session, owner_id: int):
         db.query(models.GDZRating.value)
         .join(models.GDZ)
         .filter(models.GDZ.owner_id == owner_id)
-        .order_by(models.GDZRating.id.desc())  # Сортировка по убыванию id (новые первыми)
-        .limit(5)  # Ограничиваем выборку 5 записями
+        .order_by(models.GDZRating.id.desc())
+        .limit(5)
         .all()
     )
 
@@ -241,6 +247,13 @@ def update_user_rating(db: orm.Session, owner_id: int):
 
     db.commit()
 
+def enforce_elite_access(gdz, user):
+    if gdz.is_elite and gdz.owner_id != user.id:
+        if user.user_rating is None or user.user_rating < 4.8:
+            raise HTTPException(
+                status_code=403,
+                detail="Недостаточный рейтинг для доступа к элитному ГДЗ"
+            )
 
 async def cleanup_old_gdz(db: orm.Session):
     MAX_GDZ = 100  # Максимальное количество ГДЗ для хранения
@@ -257,7 +270,6 @@ async def cleanup_old_gdz(db: orm.Session):
             )
 
 
-            # Собираем ID ГДЗ и пути к файлам для удаления
             gdz_to_delete: List[int] = []
             file_paths: List[str] = []
 
@@ -281,7 +293,6 @@ async def cleanup_old_gdz(db: orm.Session):
              filter(models.Codes.gdz_id.in_(gdz_to_delete)).
              delete())
 
-            # Удаляем связанные записи из GDZRating
             (db.query(models.GDZRating).
              filter(models.GDZRating.gdz_id.in_(gdz_to_delete)).
              delete())
@@ -317,111 +328,114 @@ with open(template_path, "w") as f:
     "owner_id": {{ owner_id }},
     "gdz_id": {% if gdz_id %}{{ gdz_id }}{% else %}null{% endif %},
     "description": "{{ description }}",
+    "full_description": "{{full_description}}",
     "category": "{{ category }}",
     "subject": "{{ subject }}",
-    "content": "{{ content }}",
     "content_text": "{{ content_text }}",
     "price": {{ price }},
-    "is_elite": {% if is_elite %}true{% else %}false{% endif %},
-    "content_path": "{{ content_path }}"
+    "is_elite": {% if is_elite %}true{% else %}false{% endif %}
 }
 """)
 env = Environment(loader=FileSystemLoader(TEMPLATES_DIR))
 
 
 async def save_draft_to_file(draft_content: dict, file_path: Path) -> None:
-    """Сохраняет данные черновика в JSON-файл с использованием Jinja2-шаблона."""
     DRAFTS_DIR.mkdir(parents=True, exist_ok=True)
     template = env.get_template(DRAFT_TEMPLATE)
     try:
-        # Экранируем строки для безопасного JSON
         safe_content = {
             k: str(v).replace('"', '\\"') if isinstance(v, str) else v
             for k, v in draft_content.items()
         }
+        print("safe_content", safe_content)
         rendered_content = template.render(**safe_content)
         print(f"Содержимое JSON черновика: {rendered_content}")  # Отладка
-        # Проверяем, что JSON валиден
         json.loads(rendered_content)
     except Exception as e:
-        print(f"Ошибка генерации JSON черновика: {str(e)}")  # Отладка
+        print(f"Ошибка генерации JSON черновика: {str(e)}")
         raise HTTPException(status_code=500, detail=f"Ошибка генерации JSON: {str(e)}")
 
     try:
         async with aiofiles.open(file_path, "w") as f:
             await f.write(rendered_content)
-        print(f"JSON черновика сохранён: {file_path}")  # Отладка
+        print(f"JSON черновика сохранён: {file_path}")
     except Exception as e:
-        print(f"Ошибка сохранения JSON черновика {file_path}: {str(e)}")  # Отладка
         raise HTTPException(status_code=500, detail=f"Ошибка сохранения черновика: {str(e)}")
 
 
 async def read_draft_from_file(file_path: Path) -> dict:
-    """Читает данные черновика из JSON-файла."""
-    if not file_path.exists():
-        print(f"Файл черновика не найден: {file_path}")  # Отладка
-        raise HTTPException(status_code=404, detail="Файл черновика не найден")
-
     try:
         async with aiofiles.open(file_path, "r") as f:
             content = await f.read()
-            print(f"Содержимое файла черновика {file_path}: {content}")  # Отладка
+            print(f"Содержимое файла черновика {file_path}: {content}")
             return json.loads(content)
     except json.JSONDecodeError as e:
-        print(f"Ошибка декодирования JSON {file_path}: {str(e)}")  # Отладка
+        print(f"Ошибка декодирования JSON {file_path}: {str(e)}")
         raise HTTPException(status_code=500, detail=f"Некорректный JSON в черновике: {str(e)}")
     except Exception as e:
-        print(f"Ошибка чтения черновика {file_path}: {str(e)}")  # Отладка
         raise HTTPException(status_code=500, detail=f"Ошибка чтения черновика: {str(e)}")
 
 
 async def create_or_update_draft(
-    db: orm.Session,
-    owner_id: int,
-    draft_data: schemas.DraftData,
-    file: Optional[UploadFile] = None
-) -> models.GDZDraft:
-    """Создаёт или обновляет черновик пользователя."""
-    draft = db.query(models.GDZDraft).filter_by(owner_id=owner_id).first()
-    draft_id = draft.id if draft else (db.query(func.max(models.GDZDraft.id)).scalar() or 0) + 1
-    print(draft_id)
-    filename = f"draft_{owner_id}_{draft_id}.json"
-    file_path = DRAFTS_DIR / filename
-    content_path = await save_uploaded_file(file) if file else None
-
-    print(draft_data.category)
-
-    draft_content = {
-        "id": draft_id,
-        "owner_id": owner_id,
-        "gdz_id": draft_data.gdz_id,
-        "description": draft_data.description or "",
-        "full_description": draft_data.full_description or "",
-        "category": draft_data.category or "",
-        "subject": draft_data.subject or "",
-        "content": content_path or "",
-        "content_text": draft_data.content_text or "",
-        "price": draft_data.price or 0,
-        "is_elite": draft_data.is_elite or False,
-    }
-
-    print("Сохранение черновика:", draft_content)  # Отладка
-    await save_draft_to_file(draft_content, file_path)
+        db: orm.Session,
+        owner_id: int,
+        draft_data: schemas.DraftData,
+) -> None:
     try:
-        if draft:
-            draft.file_path = str(file_path)
-        else:
-            draft = models.GDZDraft(
-                id=draft_id,
-                owner_id=owner_id,
-                file_path=str(file_path)
-            )
-            db.add(draft)
-            db.commit()
-            db.refresh(draft)
-            print("Черновик сохранён в БД:", draft_id, draft.file_path)  # Отладка
-        return draft
+        # Обновляем поле has_drafts в таблице users
+        user = db.query(models.User).filter_by(id=owner_id).first()
+        if not user:
+            raise HTTPException(status_code=404, detail="Пользователь не найден")
+
+        user.has_draft = True
+        db.commit()
+
+        draft_id = owner_id
+        filename = f"draft_{owner_id}.json"
+        file_path = DRAFTS_DIR / filename
+
+        # Формируем содержимое черновика
+        draft_content = {
+            "id": draft_id,
+            "owner_id": owner_id,
+            "gdz_id": draft_data.gdz_id,
+            "description": draft_data.description or "",
+            "full_description": draft_data.full_description or "",
+            "category": draft_data.category or "",
+            "subject": draft_data.subject or "",
+            "content_text": draft_data.content_text or "",
+            "price": draft_data.price or 0,
+            "is_elite": draft_data.is_elite or False,
+        }
+
+        print("Сохранение черновика:", draft_content)  # Отладка
+        await save_draft_to_file(draft_content, file_path)
+        return
+
     except Exception as e:
-            db.rollback()
-            print(f"Ошибка сохранения черновика в БД: {str(e)}")  # Отладка
-            raise HTTPException(status_code=500, detail=f"Ошибка сохранения черновика: {str(e)}")
+        db.rollback()
+        raise HTTPException(status_code=500, detail=f"Ошибка сохранения черновика: {str(e)}")
+
+async def cleanup_draft(db: orm.Session, owner_id: str) -> None:
+    try:
+
+        user = db.query(models.User).filter_by(id=owner_id).first()
+        if not user:
+            raise HTTPException(status_code=404, detail="Пользователь не найден")
+
+        user.has_draft = False
+        db.commit()
+
+        # Формируем путь к файлу черновика
+        drafts_dir = Path(DRAFTS_DIR) if isinstance(DRAFTS_DIR, str) else DRAFTS_DIR
+        filename = f"draft_{owner_id}.json"
+        file_path = drafts_dir / filename
+
+        file_path.parent.mkdir(parents=True, exist_ok=True)
+        with open(file_path, "w") as f:
+            json.dump({}, f)
+
+    except Exception as e:
+        db.rollback()
+        print(f"Ошибка при очистке черновика: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Ошибка при очистке черновика: {str(e)}")

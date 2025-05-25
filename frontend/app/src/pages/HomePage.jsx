@@ -1,156 +1,159 @@
 import { useNavigate } from "react-router-dom";
-import React, { useState, useRef, useEffect } from "react";
+import React, { useState, useRef, useEffect, useContext } from "react";
 import "../assets/styles/grid.css";
 import HeaderTop from "../components/ui/topHeader";
 import HeaderButtom1 from "../components/ui/buttomHeader1";
 import CapIcon from "../assets/images/GraduationCap.svg";
 import ButtonWithIcon from "../components/ui/iconTextButton.jsx";
+import { UserContext } from "../contexts/UserContext";
 
-// Константы для названий категорий
+// Названия для отображения заголовков блоков
 const CATEGORY_TITLES = {
-  laboratoryWorks: "ВУЗ • Лабораторные работы",
-  researchWorks: "ВУЗ • Исследовательские работы",
-  schoolTasks: "Школьный курс • Задачи",
-  universityTasks: "ВУЗ • Задачи"
+    laboratoryWorks: "ВУЗ • Лабораторные работы",
+    researchWorks: "ВУЗ • Исследовательские работы",
+    schoolTasks: "Школьный курс • Задачи",
+    universityTasks: "ВУЗ • Задачи"
 };
 
-// Маппинг для строковых значений категорий
+// Названия для API
 const CATEGORY_NAMES = {
-  laboratoryWorks: "Лабораторные работы",
-  researchWorks: "Научные работы",
-  schoolTasks: "Школьные задачи",
-  universityTasks: "Университетские задачи"
+    laboratoryWorks: "Лабораторные работы",
+    researchWorks: "Научные работы",
+    schoolTasks: "Школьные задачи",
+    universityTasks: "Университетские задачи"
 };
 
 const HomePage = () => {
-  const navigate = useNavigate();
-  const [categories, setCategories] = useState({
-    laboratoryWorks: [],
-    researchWorks: [],
-    schoolTasks: [],
-    universityTasks: []
-  });
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(null);
+    const navigate = useNavigate();
+    const { user } = useContext(UserContext);
+    const [categories, setCategories] = useState({
+        laboratoryWorks: [],
+        researchWorks: [],
+        schoolTasks: [],
+        universityTasks: []
+    });
+    const [loading, setLoading] = useState(true);
+    const [error, setError] = useState(null);
 
-  const refs = {
-    laboratoryWorks: useRef(null),
-    researchWorks: useRef(null),
-    schoolTasks: useRef(null),
-    universityTasks: useRef(null)
-  };
-
-  const fetchSubjects = async (category) => {
-    try {
-      const response = await fetch(`/api/subjects/${category}`);
-      if (!response.ok) throw new Error(`Failed to load ${category}`);
-      return await response.json();
-    } catch (err) {
-      console.error(`Error loading ${category}:`, err);
-      setError(err.message);
-      return [];
-    }
-  };
-
-  useEffect(() => {
-    const loadAllCategories = async () => {
-      try {
-        setLoading(true);
-
-        const [labData, researchData, schoolData, universityData] = await Promise.all([
-          fetchSubjects("Лабораторные работы"),
-          fetchSubjects("Научные работы"),
-          fetchSubjects("Школьные задачи"),
-          fetchSubjects("Университетские задачи")
-        ]);
-
-        setCategories({
-          laboratoryWorks: labData,
-          researchWorks: researchData,
-          schoolTasks: schoolData,
-          universityTasks: universityData
-        });
-      } catch (err) {
-        setError(err.message);
-      } finally {
-        setLoading(false);
-      }
+    const refs = {
+        laboratoryWorks: useRef(null),
+        researchWorks: useRef(null),
+        schoolTasks: useRef(null),
+        universityTasks: useRef(null)
     };
 
-    loadAllCategories();
-  }, []);
-
-  useEffect(() => {
-    const setupHorizontalScroll = (ref) => {
-      if (!ref.current) return;
-
-      const handleWheel = (event) => {
-        if (event.deltaY !== 0) {
-          ref.current.scrollLeft += event.deltaY;
-          event.preventDefault();
+    const fetchSubjects = async (category) => {
+        try {
+            const response = await fetch(`/api/subjects/${category}`);
+            if (!response.ok) throw new Error(`Failed to load ${category}`);
+            return await response.json();
+        } catch (err) {
+            console.error(`Error loading ${category}:`, err);
+            setError(err.message);
+            return [];
         }
-      };
-
-      ref.current.addEventListener('wheel', handleWheel);
-      return () => ref.current.removeEventListener('wheel', handleWheel);
     };
 
-    Object.values(refs).forEach(ref => setupHorizontalScroll(ref));
-  }, []);
+    useEffect(() => {
+        const loadAllCategories = async () => {
+            try {
+                setLoading(true);
+                const [labData, researchData, schoolData, universityData] = await Promise.all([
+                    fetchSubjects(CATEGORY_NAMES.laboratoryWorks),
+                    fetchSubjects(CATEGORY_NAMES.researchWorks),
+                    fetchSubjects(CATEGORY_NAMES.schoolTasks),
+                    fetchSubjects(CATEGORY_NAMES.universityTasks)
+                ]);
 
-  const handleCardClick = (category, subjectName) => {
-    // Формируем slug как category_subject
-    const combinedSlug = `${category}_${subjectName}`;
-    navigate(`/category/${combinedSlug}`);
-  };
+                setCategories({
+                    laboratoryWorks: labData,
+                    researchWorks: researchData,
+                    schoolTasks: schoolData,
+                    universityTasks: universityData
+                });
+            } catch (err) {
+                setError(err.message);
+            } finally {
+                setLoading(false);
+            }
+        };
 
-  if (loading) return <div className="loading">Загрузка...</div>;
-  if (error) return <div className="error">Ошибка: {error}</div>;
+        loadAllCategories();
+    }, []);
 
-  return (
-    <div className="">
-      <header>
-        <HeaderTop username={"Gleb"} />
-        <HeaderButtom1 />
-      </header>
+    useEffect(() => {
+        const setupHorizontalScroll = (ref) => {
+            if (!ref.current) return;
 
-      <div className="grid">
-        {Object.entries(categories).map(([categoryKey, items]) => (
-          <div className="row-complete" key={categoryKey}>
-            <div className="row-header">{CATEGORY_TITLES[categoryKey]}</div>
-            <div className="row-cards" ref={refs[categoryKey]}>
-              {items.map((item, index) => (
-                categoryKey === 'researchWorks' ? (
-                  <ButtonWithIcon
-                    icon={CapIcon}
-                    key={index}
-                    className="card"
-                    onClick={() => handleCardClick(
-                      CATEGORY_NAMES[categoryKey], // Используем строковое значение категории
-                      item // item — строка
-                    )}
-                  >
-                    {item} {/* Отображаем item как строку */}
-                  </ButtonWithIcon>
-                ) : (
-                  <button
-                    key={index}
-                    className="card"
-                    onClick={() => handleCardClick(
-                      CATEGORY_NAMES[categoryKey], // Используем строковое значение категории
-                      item // item — строка
-                    )}
-                  >
-                    {item} {/* Отображаем item как строку */}
-                  </button>
-                )
-              ))}
+            const handleWheel = (event) => {
+                if (event.deltaY !== 0) {
+                    ref.current.scrollLeft += event.deltaY;
+                    event.preventDefault();
+                }
+            };
+
+            ref.current.addEventListener('wheel', handleWheel);
+            return () => ref.current.removeEventListener('wheel', handleWheel);
+        };
+
+        Object.values(refs).forEach(ref => setupHorizontalScroll(ref));
+    }, []);
+
+  const handleCardClick = (categoryName, subjectName) => {
+  const combinedSlug = `${categoryName}_${subjectName}`;
+  if (!user) {
+    navigate("/", {
+      state: {
+        from: { pathname: `/category/${combinedSlug}` }
+      }
+    });
+    return;
+  }
+  navigate(`/category/${combinedSlug}`);
+};
+
+    if (loading) return <div className="loading">Загрузка...</div>;
+    if (error) return <div className="error">Ошибка: {error}</div>;
+
+    return (
+        <div>
+            <header>
+                <HeaderTop username={user?.username || "Гость"} />
+                <HeaderButtom1 />
+            </header>
+
+
+            <div className="grid">
+                {Object.entries(categories).map(([categoryKey, items]) => (
+                    <div className="row-complete" key={categoryKey}>
+                        <div className="row-header">{CATEGORY_TITLES[categoryKey]}</div>
+                        <div className="row-cards" ref={refs[categoryKey]}>
+                            {items.map((item, index) => (
+                                categoryKey === 'researchWorks' ? (
+                                    <ButtonWithIcon
+                                        icon={CapIcon}
+                                        key={index}
+                                        className="card"
+                                        onClick={() => handleCardClick(CATEGORY_NAMES[categoryKey], item)}
+                                    >
+                                        {item}
+                                    </ButtonWithIcon>
+                                ) : (
+                                        <button
+                                            key={index}
+                                            className="card"
+                                            onClick={() => handleCardClick(CATEGORY_NAMES[categoryKey], item)}
+                                        >
+                                            {item}
+                                        </button>
+                                    )
+                            ))}
+                        </div>
+                    </div>
+                ))}
             </div>
-          </div>
-        ))}
-      </div>
-    </div>
-  );
+        </div>
+    );
 };
 
 export default HomePage;

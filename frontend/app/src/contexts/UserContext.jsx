@@ -39,6 +39,7 @@ export const UserProvider = ({ children }) => {
         username: data.username,
         realname: data.realname,
         rating: data.rating ? parseFloat(data.rating) : null,
+        has_drafts: data.has_drafts
       };
     } catch (err) {
       console.error('Ошибка загрузки данных:', err);
@@ -69,8 +70,15 @@ export const UserProvider = ({ children }) => {
     initializeUser();
   }, [fetchUserData]);
 
+    const updateUser = (updates) => {
+    setUser((prevUser) => ({
+      ...prevUser,
+      ...updates,
+    }));
+  };
+
   return (
-    <UserContext.Provider value={{ user, setUser }}>
+    <UserContext.Provider value={{ user, setUser, updateUser }}>
       {children}
     </UserContext.Provider>
   );

@@ -10,11 +10,12 @@ class User(db.Base):
     realname = sql.Column(sql.String(50), unique=False, nullable=False)
     password_hash = sql.Column(sql.String, nullable=False)
     user_rating = sql.Column(sql.Float, nullable=False, default=0.0)
+    has_draft =sql.Column(sql.Boolean, nullable=False, default=False)
 
 
     GDZ = orm.relationship("GDZ", back_populates="user")
     purchases = orm.relationship("Purchase", back_populates="buyer")
-    drafts = orm.relationship("GDZDraft", back_populates="owner")
+    # drafts = orm.relationship("GDZDraft", back_populates="owner")
 
     def verify_password(self, password: str):
         return hash.bcrypt.verify(password, self.password_hash)
@@ -25,7 +26,6 @@ class Subjects(db.Base):
     subject_name = sql.Column(sql.Integer, primary_key=True, index=True)
     category = sql.Column(sql.String(100), nullable=False)
     paths = sql.Column(sql.String(100), nullable=False)
-
 
 class GDZ(db.Base):
     __tablename__ = 'gdz'
@@ -79,14 +79,14 @@ class Codes(db.Base):
     gdz = orm.relationship("GDZ")
 
 
-class GDZDraft(db.Base):
-    __tablename__ = 'gdz_drafts'
-    __table_args__ = (
-        sql.UniqueConstraint('owner_id', name='uix_owner'),
-    )
-
-    id = sql.Column(sql.Integer, primary_key=True)
-    owner_id = sql.Column(sql.Integer, sql.ForeignKey("users.id"), nullable=False)
-    file_path = sql.Column(sql.String, nullable=False)
-
-    owner = orm.relationship("User", back_populates="drafts")
+# class GDZDraft(db.Base):
+#     __tablename__ = 'gdz_drafts'
+#     __table_args__ = (
+#         sql.UniqueConstraint('owner_id', name='uix_owner'),
+#     )
+#
+#     id = sql.Column(sql.Integer, primary_key=True)
+#     owner_id = sql.Column(sql.Integer, sql.ForeignKey("users.id"), nullable=False)
+#     file_path = sql.Column(sql.String, nullable=False)
+#
+#     owner = orm.relationship("User", back_populates="drafts")

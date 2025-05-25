@@ -21,8 +21,8 @@
   position: relative; /* Для абсолютного позиционирования .back-button */
 }
 
-/* Кнопка "Назад" */
-a.back-button {
+
+.back-button {
   position: absolute;
   top: 16px;
   left: 16px;
@@ -31,20 +31,23 @@ a.back-button {
   justify-content: center;
   width: 40px;
   height: 40px;
-  background-color: #f5f5f5; /* Цвет фона, можно заменить на var(--clr-light) */
+  background-color: var(--clr-grey-0);
   border-radius: 50%;
   font-size: 24px;
-  color: #000; /* Цвет стрелки, можно заменить на var(--clr-dark) */
-  text-decoration: none !important; /* Убираем подчеркивание */
+  color: var(--clr-dark);
+  text-decoration: none !important;
   transition: background-color 0.2s, transform 0.2s;
+  border: none;
+  cursor: pointer;
+  appearance: none;
 }
 
-a.back-button:hover {
-  background-color: #e0e0e0; /* Цвет при наведении, можно заменить на var(--clr-grey-1) */
+.back-button:hover {
+  background-color: var(--clr-grey-1); /* #edeef0 */
   transform: scale(1.1);
 }
 
-a.back-button:active {
+.back-button:active {
   transform: scale(0.95);
 }
 
@@ -196,4 +199,5 @@ input:checked + .slider:before {
 .inputBox:hover::before {
   background-color: var(--clr-grey-0);
   border-color: var(--clr-accent-hover);
-}
+
+

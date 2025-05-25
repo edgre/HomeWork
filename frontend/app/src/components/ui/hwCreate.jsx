@@ -1,5 +1,6 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useContext } from "react";
 import { useNavigate } from "react-router-dom";
+import { UserContext } from "../../contexts/UserContext";
 import "../../assets/styles/font.css";
 import "../../assets/styles/buttons.css";
 import "../../assets/styles/colors.css";
@@ -19,14 +20,42 @@ const HomeworkCreate = () => {
   const [file, setFile] = useState(null);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState(null);
+  const [isElite, setIsElite] = useState(false);
+  const [userRating, setUserRating] = useState(0);
 
   const navigate = useNavigate();
+  const { user, updateUser } = useContext(UserContext);
 
   useEffect(() => {
-    const fetchDraft = async () => {
+    const fetchUserRating = async () => {
       const token = localStorage.getItem("access_token");
       if (!token) {
         setError("Токен авторизации не найден");
+        return;
+      }
+
+      try {
+        const response = await fetch("/api/users/me", {
+          method: "GET",
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        });
+
+        if (!response.ok) {
+          throw new Error("Ошибка при получении профиля");
+        }
+
+        const userData = await response.json();
+        setUserRating(userData.user_rating || 0);
+      } catch (err) {
+        setError(err.message || "Ошибка при получении рейтинга");
+      }
+    };
+
+    const fetchDraft = async () => {
+      const token = localStorage.getItem("access_token");
+      if (!token || !user?.has_draft) {
         return;
       }
 
@@ -39,58 +68,62 @@ const HomeworkCreate = () => {
         });
 
         if (!response.ok) {
-          if (response.status === 404) {
-            return;
-          }
           const errorData = await response.json();
           throw new Error(errorData.detail || "Ошибка при получении черновика");
         }
 
         const draftData = await response.json();
-
-        // Populate form fields with non-empty draft data
         if (draftData.category) setSelectedCategory(draftData.category);
         if (draftData.subject) setSelectedSubcategory(draftData.subject);
         if (draftData.description) setShortDescription(draftData.description);
         if (draftData.full_description) setFullDescription(draftData.full_description);
         if (draftData.price !== undefined && draftData.price !== null) setPrice(draftData.price.toString());
         if (draftData.content_text) setShortAnswer(draftData.content_text);
-        // Note: File is not populated as it requires special handling (e.g., fetching the file from a URL or path)
+        if (draftData.is_elite !== undefined) setIsElite(draftData.is_elite);
       } catch (err) {
         setError(err.message || "Ошибка при получении черновика");
       }
     };
 
+    fetchUserRating();
     fetchDraft();
-  }, []); // Empty dependency array to run once on mount
+  }, [user]);
+
+  const validateInput = (input) => {
+    if (typeof input === "string" && (input.includes("{{") || input.includes("{%"))) {
+      throw new Error("Недопустимые символы в вводе");
+    }
+    return input;
+  };
 
   const saveDraftToServer = async () => {
+    console.log("saveDraftToServer вызвана");
     const shouldSave = selectedCategory || selectedSubcategory || shortDescription || fullDescription || price || shortAnswer || file;
     if (!shouldSave) {
+      console.log("Нет данных для сохранения черновика");
       return;
     }
 
     const token = localStorage.getItem("access_token");
     if (!token) {
+      setError("Токен авторизации отсутствует");
       return;
     }
 
-    const formData = new FormData();
-    const draftData = {
-      category: selectedCategory,
-      subject: selectedSubcategory,
-      description: shortDescription,
-      full_description: fullDescription,
-      content_text: shortAnswer,
-      price: parseInt(price) || 0,
-      is_elite: false,
-    };
-    formData.append("gdz_str", JSON.stringify(draftData));
-    if (file) {
-      formData.append("file", file);
-    }
-
     try {
+      const draftData = {
+        category: validateInput(selectedCategory),
+        subject: validateInput(selectedSubcategory),
+        description: validateInput(shortDescription),
+        full_description: validateInput(fullDescription),
+        content_text: validateInput(shortAnswer),
+        price: parseInt(price) || 0,
+        is_elite: isElite,
+      };
+
+      const formData = new FormData();
+      formData.append("gdz_str", JSON.stringify(draftData));
+
       const response = await fetch("/api/gdz/save_draft", {
         method: "POST",
         body: formData,
@@ -100,13 +133,18 @@ const HomeworkCreate = () => {
       });
 
       if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.message || "Ошибка при сохранении черновика");
+        const errorData = await response.json().catch(() => ({
+          detail: `HTTP ${response.status}: Ошибка сервера`,
+        }));
+        throw new Error(errorData.detail || `Не удалось сохранить черновик: Ошибка ${response.status}`);
       }
 
-      await response.json();
+      const responseData = await response.json();
+      console.log("Черновик успешно сохранен:", responseData);
+      updateUser({ has_draft: true });
     } catch (err) {
-      setError(err.message || "Ошибка при сохранении черновика");
+      setError(err.message || "Не удалось сохранить черновик. Пожалуйста, попробуйте снова.");
+      console.error("Ошибка в saveDraftToServer:", err);
     }
   };
 
@@ -121,38 +159,28 @@ const HomeworkCreate = () => {
     setIsLoading(true);
     setError(null);
 
-    // Validation
     if (!selectedCategory || !selectedSubcategory) {
       setError("Пожалуйста, выберите категорию и предмет");
       setIsLoading(false);
       return;
     }
 
-    // Save draft before submitting
-    await saveDraftToServer();
-
     try {
       const formData = new FormData();
-
-      // Add file if it exists
       if (file) {
         formData.append("content_file", file);
       }
-
-      const combinedCategory = `${selectedCategory}_${selectedSubcategory}`;
-
-      // Create GDZ data object
+      const combinedCategory = `${validateInput(selectedCategory)}_${validateInput(selectedSubcategory)}`;
       const gdzData = {
         category: combinedCategory,
-        description: shortDescription,
-        full_description: fullDescription,
-        price: parseInt(price),
-        content_text: shortAnswer,
+        description: validateInput(shortDescription),
+        full_description: validateInput(fullDescription),
+        price: parseInt(price) || 0,
+        content_text: validateInput(shortAnswer),
+        is_elite: isElite,
       };
-
       formData.append("gdz_str", JSON.stringify(gdzData));
 
-      // Send data to server
       const response = await fetch("/api/gdz/create", {
         method: "POST",
         body: formData,
@@ -162,15 +190,29 @@ const HomeworkCreate = () => {
       });
 
       if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.message || "Ошибка при создании ГДЗ");
+        const errorData = await response.json().catch(() => ({
+          detail: `HTTP ${response.status}: Ошибка сервера`,
+        }));
+        throw new Error(errorData.detail || `Не удалось опубликовать ГДЗ: Ошибка ${response.status}`);
       }
 
-      // Handle successful response
-      await response.json();
+      const responseData = await response.json();
       alert("ГДЗ успешно опубликовано!");
+      console.log("Публикация завершена, сброс формы:", responseData);
+
+      setSelectedCategory("");
+      setSelectedSubcategory("");
+      setShortDescription("");
+      setFullDescription("");
+      setPrice("");
+      setShortAnswer("");
+      setFile(null);
+      setIsElite(false);
+      updateUser({ has_draft: false });
+      navigate("/home");
     } catch (err) {
-      setError(err.message || "Произошла ошибка при отправке данных");
+      setError(err.message || "Не удалось опубликовать ГДЗ. Пожалуйста, попробуйте снова.");
+      console.error("Ошибка в handleSubmit:", err);
     } finally {
       setIsLoading(false);
     }
@@ -178,21 +220,17 @@ const HomeworkCreate = () => {
 
   return (
     <div className="auth-form-container" style={{ marginTop: "42px", position: "relative" }}>
-      {/* Back button */}
-      <a href="/home" className="back-button" onClick={handleBackClick}>
+      <button className="back-button" onClick={handleBackClick}>
         ←
-      </a>
-
+      </button>
       <h1 className="h1" style={{ verticalAlign: "center", justifyContent: "center" }}>
         Создание своего ГДЗ
       </h1>
-
       {error && (
         <div className="error-message" style={{ color: "red", marginBottom: "16px" }}>
           {error}
         </div>
       )}
-
       <form className="auth-form" onSubmit={handleSubmit}>
         <DropdownList
           onCategoryChange={setSelectedCategory}
@@ -200,7 +238,6 @@ const HomeworkCreate = () => {
           initialCategory={selectedCategory}
           initialSubcategory={selectedSubcategory}
         />
-
         <div className="form-group">
           <h4 style={{ color: "#000", marginBottom: "8px" }}>
             Краткое описание задания
@@ -214,7 +251,6 @@ const HomeworkCreate = () => {
             required
           />
         </div>
-
         <div className="form-group">
           <h4 style={{ color: "#000", marginBottom: "8px" }}>
             Полная формулировка задания
@@ -228,7 +264,6 @@ const HomeworkCreate = () => {
             rows={4}
           />
         </div>
-
         <div className="form-group">
           <h4 style={{ color: "#000" }}>Цена</h4>
           <h4 style={{ marginBottom: "8px" }}>(Числом, 0 = бесплатно)</h4>
@@ -243,7 +278,6 @@ const HomeworkCreate = () => {
             required
           />
         </div>
-
         <div className="form-group">
           <h4 style={{ color: "#000", marginBottom: "8px" }}>Короткий ответ</h4>
           <input
@@ -255,7 +289,6 @@ const HomeworkCreate = () => {
             required
           />
         </div>
-
         <div className="form-group">
           <h4 style={{ color: "#000", marginBottom: "8px" }}>
             Загрузить решение (PDF, Word, изображения)
@@ -267,7 +300,20 @@ const HomeworkCreate = () => {
             </div>
           )}
         </div>
-
+        {userRating >= 4.8 && (
+          <div className="form-group" style={{ display: "flex", alignItems: "center" }}>
+            <input
+              type="checkbox"
+              id="isElite"
+              checked={isElite}
+              onChange={(e) => setIsElite(e.target.checked)}
+              style={{ marginRight: "8px" }}
+            />
+            <label htmlFor="isElite" style={{ color: "#000" }}>
+              Сделать элитным ГДЗ
+            </label>
+          </div>
+        )}
         <div className="form-group">
           <button
             type="submit"

@@ -13,6 +13,8 @@ class UserCreate(User):
 
 class UserInDB (User):
     id: int
+    user_rating: float = 0.0
+    has_draft: bool
     class Config:
         from_attributes = True
 
@@ -27,7 +29,7 @@ class GDZCreate(BaseModel):
         category: str
         price: int
         # rating: float = 0.0s
-        # is_elite: bool = False
+        is_elite: bool = False
         content_text: str
 
         model_config = ConfigDict(from_attributes=True)
@@ -38,7 +40,7 @@ class GDZPublicShort(BaseModel):
     price:int
     description:str
     has_purchased: bool
-
+    is_elite: bool
 
 class GDZPublic(BaseModel):
     id: int

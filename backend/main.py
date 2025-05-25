@@ -9,6 +9,7 @@ import schemas
 from typing import List, Dict, Union
 from fastapi import Depends
 from sqlalchemy.orm import Session
+from sqlalchemy import or_
 from pathlib import Path
 
 app = FastAPI()
@@ -132,29 +133,36 @@ async def create_gdz_en(
     return await services.create_gdz(db, gdz_data, content_file, owner_id=current_user.id)
 
 
-
-
-
 @app.get("/gdz_category/{category}", response_model=list[schemas.GDZPublicShort])
 async def get_gdz_by_category(
         category: str,
         current_user: models.User = Depends(services.get_current_user),
         db: Session = Depends(get_db)):
-    tasks = ((db.query(models.GDZ)
-     .filter(models.GDZ.category == category))
-     .all())
+    query = db.query(models.GDZ).filter(models.GDZ.category == category)
+
+    if current_user.user_rating is None or current_user.user_rating < 4.8:
+        print(current_user.user_rating)
+        query = query.filter(
+            or_(
+                models.GDZ.is_elite == False,
+                models.GDZ.owner_id == current_user.id
+            )
+        )
+
+    tasks = query.all()
     res = [
-            {
-                "id": task.id,
-                "description": task.description,
-                "price": task.price,
-                "owner_id": task.owner_id,
-                "has_purchased": await services.get_purchase(db, current_user.id, task.id) is not None
-            }
-            for task in tasks
-        ]
+        {
+            "id": task.id,
+            "description": task.description,
+            "price": task.price,
+            "owner_id": task.owner_id,
+            "is_elite": task.is_elite,
+            "has_purchased": await services.get_purchase(db, current_user.id, task.id) is not None
+        }
+        for task in tasks
+    ]
     print(res)
-    return(res)
+    return res
 
 # @app.get("/gdz/{gdz_id}", response_model=schemas.GDZPublic)
 # async def get_gdz_by_id(gdz_id: int, db: Session = Depends(get_db)):
@@ -173,6 +181,8 @@ async def get_gdz_full(
     gdz = await services.get_gdz_by_id(db, gdz_id)
     if not gdz:
         raise HTTPException(status_code=404, detail="ГДЗ не найдено")
+
+    services.enforce_elite_access(gdz, current_user)
 
     # Проверяем, является ли пользователь владельцем или покупателем
     is_free = gdz.price==0
@@ -326,54 +336,70 @@ async def rate_gdz(
         "owner_rating": gdz.user.user_rating
     }
 
-@app.post("/gdz/save_draft", response_model=schemas.DraftResponse)
+@app.post("/gdz/save_draft")
 async def save_draft(
         gdz_str: str = Form(...),
-        content_file: UploadFile = File(None),
         db: orm.Session = Depends(services.get_db),
         current_user: models.User = Depends(services.get_current_user)
 ):
     draft_data = schemas.DraftData.model_validate_json(gdz_str)
     try:
-        draft = await services.create_or_update_draft(
+        await services.create_or_update_draft(
             db=db,
             owner_id=current_user.id,
             draft_data=draft_data,
-            file=content_file
         )
-        return {
-            "draft_id": draft.id,
-            "file_path": draft.file_path
-        }
     except Exception as e:
         db.rollback()
         raise HTTPException(status_code=500, detail=str(e))
 
+
+DRAFTS_DIR = "drafts"
+drafts_dir = Path(DRAFTS_DIR)
 
 @app.get("/gdz/get_draft", response_model=schemas.DraftData)
 async def get_draft(
         db: orm.Session = Depends(services.get_db),
         current_user: models.User = Depends(services.get_current_user)
 ):
-    draft = db.query(models.GDZDraft).filter_by(owner_id=current_user.id).first()
+    # Проверяем, существует ли пользователь
+    user = db.query(models.User).filter_by(id=current_user.id).first()
+    if not user:
+        raise HTTPException(status_code=404, detail="Пользователь не найден")
 
-    if not draft:
-        raise HTTPException(status_code=404, detail="Черновик не найден")
+    if not user.has_draft:
+        return schemas.DraftData(
+            description="",
+            category="",
+            subject="",
+            content_text="",
+            price=0,
+            is_elite=False,
+            gdz_id=None
+        )
+    filename = f"draft_{current_user.id}.json"
+    file_path = drafts_dir / filename
 
-    data = await services.read_draft_from_file(Path(draft.file_path))
+    try:
+        # Читаем данные из файла
+        data = await services.read_draft_from_file(Path(file_path))
 
-    if data.get("owner_id") != current_user.id:
-        raise HTTPException(status_code=403, detail="Вы не можете смотреть чужие черновики")
+        # Проверяем, что черновик принадлежит текущему пользователю
+        if data.get("owner_id") != current_user.id:
+            raise HTTPException(status_code=403, detail="Вы не можете смотреть чужие черновики")
 
-    return schemas.DraftData(
-        description=data.get("description"),
-        category=data.get("category"),
-        subject = data.get("subject"),
-        content_text=data.get("content_text"),
-        price=data.get("price"),
-        is_elite=data.get("is_elite"),
-        gdz_id=data.get("gdz_id")
-    )
+        # Возвращаем данные в формате schemas.DraftData
+        return schemas.DraftData(
+            description=data.get("description"),
+            category=data.get("category"),
+            subject=data.get("subject"),
+            content_text=data.get("content_text"),
+            price=data.get("price"),
+            is_elite=data.get("is_elite"),
+            gdz_id=data.get("gdz_id")
+        )
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Ошибка чтения черновика: {str(e)}")
 
 
 @app.get("/")
