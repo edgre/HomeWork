@@ -98,7 +98,8 @@ const HomeworkCreate = () => {
 
   const saveDraftToServer = async () => {
     console.log("saveDraftToServer вызвана");
-    const shouldSave = selectedCategory || selectedSubcategory || shortDescription || fullDescription || price || shortAnswer || file;
+    // Проверяем, есть ли данные для сохранения
+    const shouldSave = selectedCategory || selectedSubcategory || shortDescription || fullDescription || price || shortAnswer || isElite;
     if (!shouldSave) {
       console.log("Нет данных для сохранения черновика");
       return;
@@ -112,24 +113,23 @@ const HomeworkCreate = () => {
 
     try {
       const draftData = {
-        category: validateInput(selectedCategory),
-        subject: validateInput(selectedSubcategory),
-        description: validateInput(shortDescription),
-        full_description: validateInput(fullDescription),
-        content_text: validateInput(shortAnswer),
+        category: validateInput(selectedCategory) || "", // Обязательное поле, пустая строка, если не заполнено
+        subject: validateInput(selectedSubcategory) || "",
+        description: validateInput(shortDescription) || "",
+        full_description: validateInput(fullDescription) || "",
+        content_text: validateInput(shortAnswer) || "",
         price: parseInt(price) || 0,
         is_elite: isElite,
+        gdz_id: null, // По умолчанию null, как в schemas.DraftData
       };
-
-      const formData = new FormData();
-      formData.append("gdz_str", JSON.stringify(draftData));
 
       const response = await fetch("/api/gdz/save_draft", {
         method: "POST",
-        body: formData,
         headers: {
           Authorization: `Bearer ${token}`,
+          "Content-Type": "application/json", // Указываем JSON
         },
+        body: JSON.stringify(draftData), // Отправляем данные как JSON
       });
 
       if (!response.ok) {

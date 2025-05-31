@@ -31,7 +31,7 @@ class GDZ(db.Base):
     __tablename__ = 'gdz'
 
     id = sql.Column(sql.Integer, primary_key=True, index=True)
-    owner_id = sql.Column(sql.Integer, sql.ForeignKey("users.username"))
+    owner_id = sql.Column(sql.Integer, sql.ForeignKey("users.id"))
     description = sql.Column(sql.String(100), nullable=False)
     full_description = sql.Column(sql.String(250), nullable=False)
     category =  sql.Column(sql.String(250), nullable=False)

@@ -1,6 +1,6 @@
 import os
 import random
-from fastapi import FastAPI, HTTPException, Depends, UploadFile
+from fastapi import FastAPI, HTTPException, Depends, UploadFile, Body
 from fastapi.responses import FileResponse
 from fastapi.security import OAuth2PasswordBearer
 from passlib.context import CryptContext
@@ -15,10 +15,11 @@ import schemas
 from typing import Optional
 import database as _db
 from pathlib import Path
-from typing import List
+from typing import List, Dict, Any
 from jinja2 import Environment, FileSystemLoader
 import logging
 import json
+import asyncio
 
 app = FastAPI()
 SECRET_KEY = os.environ.get("JWT_SECRET_KEY", os.urandom(32).hex())
@@ -145,7 +146,7 @@ async def create_gdz(
         if user.has_draft:
             await cleanup_draft(db, owner_id)
 
-        await cleanup_old_gdz(db)
+        asyncio.create_task(cleanup_old_gdz(db))
         return gdz
 
     except HTTPException:
@@ -317,55 +318,93 @@ async def cleanup_old_gdz(db: orm.Session):
         db.rollback()
         raise HTTPException(status_code=500, detail=f"Ошибка при очистке ГДЗ: {str(e)}")
 
+
 DRAFTS_DIR = Path("drafts")
-TEMPLATES_DIR = Path("templates")
-DRAFT_TEMPLATE = "gdz_draft_template.j2"
-DRAFTS_DIR.mkdir(exist_ok=True)
-template_path = TEMPLATES_DIR / "gdz_draft_template.j2"
-with open(template_path, "w") as f:
-    f.write("""{
-    "id": {{ id }},
-    "owner_id": {{ owner_id }},
-    "gdz_id": {% if gdz_id %}{{ gdz_id }}{% else %}null{% endif %},
-    "description": "{{ description }}",
-    "full_description": "{{full_description}}",
-    "category": "{{ category }}",
-    "subject": "{{ subject }}",
-    "content_text": "{{ content_text }}",
-    "price": {{ price }},
-    "is_elite": {% if is_elite %}true{% else %}false{% endif %}
-}
-""")
-env = Environment(loader=FileSystemLoader(TEMPLATES_DIR))
+env = Environment(autoescape=True)
 
+async def save_draft_to_file(draft_content: Dict[str, Any], file_path: Path) -> None:
+    print(f"Draft content: {draft_content}")
+    print(f"File path: {file_path}")
 
-async def save_draft_to_file(draft_content: dict, file_path: Path) -> None:
-    DRAFTS_DIR.mkdir(parents=True, exist_ok=True)
-    template = env.get_template(DRAFT_TEMPLATE)
-    try:
-        safe_content = {
-            k: str(v).replace('"', '\\"') if isinstance(v, str) else v
-            for k, v in draft_content.items()
-        }
-        print("safe_content", safe_content)
-        rendered_content = template.render(**safe_content)
-        print(f"Содержимое JSON черновика: {rendered_content}")  # Отладка
-        json.loads(rendered_content)
-    except Exception as e:
-        print(f"Ошибка генерации JSON черновика: {str(e)}")
-        raise HTTPException(status_code=500, detail=f"Ошибка генерации JSON: {str(e)}")
+    # Создаем директорию, если она не существует
+    file_path.parent.mkdir(parents=True, exist_ok=True)
+
+    # Формируем шаблон с безопасной обработкой всех полей
+    template_lines = []
+    for key, value in draft_content.items():
+        if key == "gdz_id":
+            template_lines.append(f'    "{key}": {{% if {key} %}}{{{{ {key}|tojson }}}}{{% else %}}null{{% endif %}},')
+        elif key == "is_elite":
+            template_lines.append(f'    "{key}": {{% if {key} %}}true{{% else %}}false{{% endif %}},')
+        elif isinstance(value, (int, float)) or key in ["id", "owner_id", "price"]:
+            template_lines.append(f'    "{key}": {{{{ {key} }}}},')
+        else:
+            template_lines.append(f'    "{key}": "{value}",')
+
+    # Удаляем последнюю запятую
+    template_lines[-1] = template_lines[-1].rstrip(',')
+
+    # Формируем полный шаблон с обрамлением в фигурные скобки
+    template_string = '{\n' + '\n'.join(template_lines) + '\n}'
+    print(f"Generated template string: {template_string}")
 
     try:
-        async with aiofiles.open(file_path, "w") as f:
+        template = env.from_string(template_string)
+        rendered_content = template.render(**draft_content)
+        print(f"Rendered content: {rendered_content}")
+
+        async with aiofiles.open(file_path.with_suffix('.txt'), "w", encoding="utf-8") as f:
             await f.write(rendered_content)
-        print(f"JSON черновика сохранён: {file_path}")
     except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Ошибка сохранения: {str(e)}")
+
+
+async def create_or_update_draft(
+        db: orm.Session,
+        owner_id: int,
+        data: Dict[str, Any] = Body(...),
+) -> None:
+    print(f"Received data: {data}")
+
+    try:
+        user = db.query(models.User).filter_by(id=owner_id).first()
+        if not user:
+            print("Error: User not found")
+            raise HTTPException(status_code=404, detail="Пользователь не найден")
+
+        user.has_draft = True
+        db.commit()
+
+        draft_id = owner_id
+        filename = f"draft_{owner_id}.txt"
+        file_path = DRAFTS_DIR / filename
+
+
+        draft_content = {
+            "id": draft_id,
+            "owner_id": owner_id,
+            "gdz_id": data.get("gdz_id"),
+            "description": data.get("description", "Default description"),
+            "full_description": data.get("full_description"),
+            "category": data.get("category", "Default category"),
+            "subject": data.get("subject", "Default subject"),
+            "content_text": data.get("content_text", "Default content"),
+            "price": data.get("price", 0),
+            "is_elite": data.get("is_elite", False),
+        }
+
+        await save_draft_to_file(draft_content, file_path)
+        return
+
+    except Exception as e:
+        print(f"Error in create_or_update_draft: {str(e)}")
+        db.rollback()
         raise HTTPException(status_code=500, detail=f"Ошибка сохранения черновика: {str(e)}")
 
 
 async def read_draft_from_file(file_path: Path) -> dict:
     try:
-        async with aiofiles.open(file_path, "r") as f:
+        async with aiofiles.open(file_path, "r", encoding="utf-8") as f:  # Изменено на utf-8
             content = await f.read()
             print(f"Содержимое файла черновика {file_path}: {content}")
             return json.loads(content)
@@ -376,66 +415,37 @@ async def read_draft_from_file(file_path: Path) -> dict:
         raise HTTPException(status_code=500, detail=f"Ошибка чтения черновика: {str(e)}")
 
 
-async def create_or_update_draft(
-        db: orm.Session,
-        owner_id: int,
-        draft_data: schemas.DraftData,
-) -> None:
+async def cleanup_draft(db: orm.Session, owner_id: str, drafts_dir: Path = "drafts") -> None:
     try:
-        # Обновляем поле has_drafts в таблице users
+        # Проверяем существование пользователя
         user = db.query(models.User).filter_by(id=owner_id).first()
         if not user:
             raise HTTPException(status_code=404, detail="Пользователь не найден")
 
-        user.has_draft = True
-        db.commit()
-
-        draft_id = owner_id
-        filename = f"draft_{owner_id}.json"
-        file_path = DRAFTS_DIR / filename
-
-        # Формируем содержимое черновика
-        draft_content = {
-            "id": draft_id,
-            "owner_id": owner_id,
-            "gdz_id": draft_data.gdz_id,
-            "description": draft_data.description or "",
-            "full_description": draft_data.full_description or "",
-            "category": draft_data.category or "",
-            "subject": draft_data.subject or "",
-            "content_text": draft_data.content_text or "",
-            "price": draft_data.price or 0,
-            "is_elite": draft_data.is_elite or False,
-        }
-
-        print("Сохранение черновика:", draft_content)  # Отладка
-        await save_draft_to_file(draft_content, file_path)
-        return
-
-    except Exception as e:
-        db.rollback()
-        raise HTTPException(status_code=500, detail=f"Ошибка сохранения черновика: {str(e)}")
-
-async def cleanup_draft(db: orm.Session, owner_id: str) -> None:
-    try:
-
-        user = db.query(models.User).filter_by(id=owner_id).first()
-        if not user:
-            raise HTTPException(status_code=404, detail="Пользователь не найден")
-
+        # Сбрасываем флаг has_draft
         user.has_draft = False
         db.commit()
 
         # Формируем путь к файлу черновика
-        drafts_dir = Path(DRAFTS_DIR) if isinstance(DRAFTS_DIR, str) else DRAFTS_DIR
+        drafts_dir = Path(drafts_dir) if isinstance(drafts_dir, str) else drafts_dir
         filename = f"draft_{owner_id}.json"
         file_path = drafts_dir / filename
 
+        # Создаем директорию, если она не существует
         file_path.parent.mkdir(parents=True, exist_ok=True)
-        with open(file_path, "w") as f:
-            json.dump({}, f)
+
+        # Очищаем содержимое файла
+        async with aiofiles.open(file_path, "w", encoding="utf-8") as f:
+            await f.write("")
+
+        print(f"Содержимое файла черновика {file_path} очищено")
+
+    except Exception as e:
+        db.rollback()
+        raise HTTPException(status_code=500, detail=f"Ошибка при очистке черновика: {str(e)}")
 
     except Exception as e:
         db.rollback()
         print(f"Ошибка при очистке черновика: {str(e)}")
         raise HTTPException(status_code=500, detail=f"Ошибка при очистке черновика: {str(e)}")
+

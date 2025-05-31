@@ -1,4 +1,4 @@
-from fastapi import FastAPI, HTTPException, Depends, security, Request, UploadFile, File, Form
+from fastapi import FastAPI, HTTPException, Depends, security, Request, UploadFile, File, Form, Body
 from typing import List, Dict
 from fastapi.middleware.cors import CORSMiddleware
 import sqlalchemy.orm as orm
@@ -6,8 +6,8 @@ from services import get_db
 import services
 import models
 import schemas
-from typing import List, Dict, Union
-from fastapi import Depends
+from typing import List, Dict, Any
+from fastapi import Depends, status
 from sqlalchemy.orm import Session
 from sqlalchemy import or_
 from pathlib import Path
@@ -126,7 +126,6 @@ async def create_gdz_en(
         print(f"Получен файл: {content_file.filename}")
         print(f"Размер файла: {content_file.size}")
         gdz_data = schemas.GDZCreate.model_validate_json(gdz_str)
-        print(gdz_data)
     except ValueError as e:
         print(f"Ошибка валидации: {e}")
         raise
@@ -205,8 +204,37 @@ async def get_image(
 ):
     return await services.get_image(name=image_name)
 
-from fastapi import HTTPException, Depends, status
-from sqlalchemy.orm import Session
+
+@app.post("/gdz/{gdz_id}/free-purchase", status_code=201)
+async def free_purchase(
+        gdz_id: int,
+        db: Session = Depends(get_db),
+        current_user: models.User = Depends(services.get_current_user)
+):
+    gdz = await services.get_gdz_by_id(db, gdz_id)
+    if not gdz:
+        raise HTTPException(status_code=404, detail="ГДЗ не найдено")
+
+    # Проверяем, что ГДЗ действительно бесплатное
+    if gdz.price != 0:
+        raise HTTPException(status_code=400, detail="Это ГДЗ не бесплатное")
+
+    # Проверяем, что у пользователя еще нет этой покупки
+    existing_purchase = await services.get_purchase(db, current_user.id, gdz_id)
+    if existing_purchase:
+        return {"message": "Покупка уже существует"}
+
+    # Создаем запись о покупке
+    purchase = models.Purchase(
+        buyer_id=current_user.id,
+        gdz_id=gdz_id,
+    )
+
+    db.add(purchase)
+    db.commit()
+    db.refresh(purchase)
+
+    return {"message": "Запись о покупке создана"}
 
 @app.post("/gdz/{gdz_id}/purchase", status_code=status.HTTP_201_CREATED)
 async def purchase_gdz(
@@ -263,6 +291,17 @@ async def confirm_purchase(
         db: Session = Depends(get_db),
         current_user: models.User = Depends(services.get_current_user)
 ):
+    gdz = await services.get_gdz_by_id(db, gdz_id)
+    if not gdz:
+        raise HTTPException(status_code=404, detail="ГДЗ не найдено")
+    existing_purchase = await services.get_purchase(db, current_user.id, gdz_id)
+    if existing_purchase:
+        raise HTTPException(status_code=400, detail="Вы уже приобрели это ГДЗ")
+
+    # Проверяем, бесплатное ли ГДЗ
+    is_free = await services.is_gdz_free(db, gdz_id)
+    if is_free:
+        raise HTTPException(status_code=400, detail="Бесплатное ГДЗ не требует покупки")
     if await services.validate_signature (db, current_user.id, gdz_id, signature.value):
 
         purchase = models.Purchase(
@@ -278,6 +317,7 @@ async def confirm_purchase(
         return {"message": "Покупка подтверждена", "gdz_id": gdz_id}
     else:
         raise HTTPException(status_code=400, detail="Введено неверное значение")
+
 
 
 @app.post("/gdz/rate")
@@ -301,6 +341,13 @@ async def rate_gdz(
         raise HTTPException(
             status_code=400,
             detail="Вы не можете оценивать свои ГДЗ"
+        )
+
+    has_purchased = await services.get_purchase(db, current_user.id, rating.gdz_id)
+    if not has_purchased and gdz.price > 0:
+        raise HTTPException(
+            status_code=403,
+            detail="Нельзя оценить ГДЗ без покупки"
         )
 
     # Проверяем, не оценивал ли уже пользователь это ГДЗ
@@ -338,17 +385,37 @@ async def rate_gdz(
 
 @app.post("/gdz/save_draft")
 async def save_draft(
-        gdz_str: str = Form(...),
-        db: orm.Session = Depends(services.get_db),
-        current_user: models.User = Depends(services.get_current_user)
+    data: Dict[str, Any] = Body(...),
+    db: orm.Session = Depends(services.get_db),
+    current_user: models.User = Depends(services.get_current_user)
 ):
-    draft_data = schemas.DraftData.model_validate_json(gdz_str)
     try:
+        # Проверяем наличие обязательных полей
+        required_fields = {"category"}  # category обязательное, остальные необязательные
+        missing_fields = required_fields - set(data.keys())
+        if missing_fields:
+            raise HTTPException(status_code=400, detail=f"Отсутствуют обязательные поля: {missing_fields}")
+
+        # Формируем draft_data, устанавливая значения по умолчанию для необязательных полей
+        draft_data = {
+            "description": data.get("description"),
+            "full_description": data.get("full_description"),
+            "category": data["category"],  # Обязательное поле
+            "subject": data.get("subject"),
+            "content_text": data.get("content_text"),
+            "price": data.get("price"),
+            "is_elite": data.get("is_elite"),
+            "gdz_id": data.get("gdz_id")
+        }
+        print(draft_data)
+
         await services.create_or_update_draft(
             db=db,
             owner_id=current_user.id,
-            draft_data=draft_data,
+            data=draft_data,
         )
+        return {"status": "success"}
+
     except Exception as e:
         db.rollback()
         raise HTTPException(status_code=500, detail=str(e))
@@ -377,13 +444,13 @@ async def get_draft(
             is_elite=False,
             gdz_id=None
         )
-    filename = f"draft_{current_user.id}.json"
+    filename = f"draft_{current_user.id}.txt"
     file_path = drafts_dir / filename
 
     try:
         # Читаем данные из файла
         data = await services.read_draft_from_file(Path(file_path))
-
+        print("data", data)
         # Проверяем, что черновик принадлежит текущему пользователю
         if data.get("owner_id") != current_user.id:
             raise HTTPException(status_code=403, detail="Вы не можете смотреть чужие черновики")
