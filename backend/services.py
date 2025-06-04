@@ -4,22 +4,24 @@ from fastapi import FastAPI, HTTPException, Depends, UploadFile, Body
 from fastapi.responses import FileResponse
 from fastapi.security import OAuth2PasswordBearer
 from passlib.context import CryptContext
-from sqlalchemy import select, func
+from sqlalchemy import select
+from sqlalchemy import or_
 from uuid import uuid4
 import aiofiles
 import jwt
 from datetime import datetime, timedelta
 import sqlalchemy.orm as orm
-import models
-import schemas
 from typing import Optional
 import database as _db
 from pathlib import Path
 from typing import List, Dict, Any
-from jinja2 import Environment, FileSystemLoader
-import logging
+from jinja2 import Environment
 import json
 import asyncio
+
+import models
+import schemas
+from constants import magic_numbers
 
 app = FastAPI()
 SECRET_KEY = os.environ.get("JWT_SECRET_KEY", os.urandom(32).hex())
@@ -78,6 +80,35 @@ async def get_current_user(
 async def get_user (db: orm.Session(), username: str):
    return db.query(models.User).filter(models.User.username == username).first()
 
+async def get_profile_data(db: orm.session, user:schemas.UserInDB):
+    user = db.query(models.User).filter(models.User.id == user.id).first()
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+
+    created_gdz = db.query(models.GDZ).filter(models.GDZ.owner_id == user.id).all()
+    gdz_list = []
+
+    for gdz in created_gdz:
+        gdz_list.append({
+            "id": gdz.id,
+            "description": gdz.description,
+            "category": gdz.category,
+            "content": gdz.content,
+            "content_text": gdz.content_text,
+            "price": gdz.price,
+            "is_elite": gdz.is_elite,
+            "owner_id": gdz.owner_id == user.id
+
+        })
+
+    return {
+        "username": user.username,
+        "realname": user.realname,
+        "user_rating": user.user_rating,
+        # "is_elite": user.is_elite,
+        "gdz_list": gdz_list
+    }
+
 
 async def create_user(db: orm.Session(), user: schemas.UserCreate):
     user_obj = models.User(
@@ -91,11 +122,19 @@ async def create_user(db: orm.Session(), user: schemas.UserCreate):
     return user_obj
 
 
+async def get_subjects_by_category(db: orm.Session(), category: str):
+    subjects = db.query(
+        models.Subjects.subject_name,
+        models.Subjects.paths
+    ).filter(
+        models.Subjects.category == category
+    ).all()
+    return [ subject.subject_name for subject in subjects]
+
 async def save_uploaded_file(file: UploadFile, upload_dir: str = "media") -> str:
     Path(upload_dir).mkdir(parents=True, exist_ok=True)
-    # Получаем оригинальное расширение файла или используем .png по умолчанию
     file_ext = file.filename.split('.')[-1] if '.' in file.filename else 'png'
-    if file_ext in ['png', 'jpg', 'jpeg', 'webp']:  # Можно расширить список допустимых форматов
+    if file_ext in ['png', 'jpg', 'jpeg']:  # Можно расширить список допустимых форматов
 
         filename = f"{uuid4()}.{file_ext}"
         filepath = os.path.join(upload_dir, filename)
@@ -118,15 +157,25 @@ async def get_image(
 
 async def create_gdz(
         db: orm.Session,
-        gdz_data: schemas.GDZCreate,
+        gdz_str: str,
         file_content: UploadFile,
         owner_id: str
 ):
     try:
-        # Сохраняем файл
+        gdz_data = schemas.GDZCreate.model_validate_json(gdz_str)
+    except ValueError as e:
+        print(f"Ошибка валидации: {e}")
+        raise
+    try:
+        user = db.query(models.User).filter_by(id=owner_id).first()
+        if gdz_data.is_elite and (user.user_rating is None or user.user_rating < 4.8):
+            raise HTTPException(
+                status_code=403,
+                detail="Недостаточный рейтинг для создания элитного ГДЗ (требуется ≥4.8)"
+            )
+
         filename = await save_uploaded_file(file_content)
 
-        # Создаем запись в БД
         gdz = models.GDZ(
             description=gdz_data.description,
             full_description=gdz_data.full_description,
@@ -150,7 +199,7 @@ async def create_gdz(
         return gdz
 
     except HTTPException:
-        raise  # Пробрасываем уже обработанные ошибки
+        raise
     except Exception as e:
         db.rollback()
         raise HTTPException(500, detail=f"Ошибка при создании записи: {str(e)}")
@@ -191,6 +240,32 @@ async def is_gdz_free(db: orm.Session, gdz_id: int):
 #     result = db.execute(stmt)
 #     return result.scalars().all()  # Возвращаем GDZ, а не Purchase
 
+async def get_gdz_by_category(category: str, current_user: schemas.UserInDB, db: orm.Session):
+    query = db.query(models.GDZ).filter(models.GDZ.category == category)
+    if current_user.user_rating is None or current_user.user_rating < 4.8:
+        print(current_user.user_rating)
+        query = query.filter(
+            or_(
+                models.GDZ.is_elite == False,
+                models.GDZ.owner_id == current_user.id
+            )
+        )
+
+    tasks = query.all()
+    res = [
+        {
+            "id": task.id,
+            "description": task.description,
+            "price": task.price,
+            "owner_id": task.owner_id,
+            "is_elite": task.is_elite,
+            "has_purchased": await get_purchase(db, current_user.id, task.id) is not None
+        }
+        for task in tasks
+    ]
+    print(res)
+    return res
+
 
 async def get_purchase(db: orm.Session, user_id: int, gdz_id: int):
     stmt = (
@@ -201,8 +276,99 @@ async def get_purchase(db: orm.Session, user_id: int, gdz_id: int):
     result = db.execute(stmt)
     return result.scalar_one_or_none()
 
+
+async def get_gdz_full(
+        gdz_id: int,
+        db: orm.session,
+        current_user: schemas.UserInDB
+):
+    gdz = await get_gdz_by_id(db, gdz_id)
+    if not gdz:
+        raise HTTPException(status_code=404, detail="ГДЗ не найдено")
+
+    enforce_elite_access(gdz, current_user)
+
+    is_free = gdz.price==0
+    is_owner = gdz.owner_id == current_user.id
+    has_purchased = await get_purchase(db, current_user.id, gdz_id) is not None
+
+    if not (is_free or is_owner or has_purchased):
+        raise HTTPException(
+            status_code=403,
+            detail="Купи сначала"
+        )
+
+    return gdz
+
+async def free_purchase(
+        gdz_id: int,
+        db: orm.Session,
+        current_user: schemas.UserInDB
+):
+    gdz = await get_gdz_by_id(db, gdz_id)
+    if not gdz:
+        raise HTTPException(status_code=404, detail="ГДЗ не найдено")
+
+    if gdz.price != 0:
+        raise HTTPException(status_code=400, detail="Это ГДЗ не бесплатное")
+
+    existing_purchase = await get_purchase(db, current_user.id, gdz_id)
+    if existing_purchase:
+        return {"message": "Покупка уже существует"}
+
+    purchase = models.Purchase(
+        buyer_id=current_user.id,
+        gdz_id=gdz_id,
+    )
+
+    db.add(purchase)
+    db.commit()
+    db.refresh(purchase)
+
+    return {"message": "Запись о покупке создана"}
+
+async def purchase_gdz(
+        gdz_id: int,
+        db: orm.Session,
+        current_user: schemas.UserInDB
+):
+    gdz = await get_gdz_by_id(db, gdz_id)
+    if not gdz:
+        raise HTTPException(status_code=404, detail="ГДЗ не найдено")
+    existing_purchase = await get_purchase(db, current_user.id, gdz_id)
+    if existing_purchase:
+        raise HTTPException(status_code=400, detail="Вы уже приобрели это ГДЗ")
+
+    is_free = await is_gdz_free(db, gdz_id)
+    if is_free:
+        raise HTTPException(status_code=400, detail="Бесплатное ГДЗ не требует покупки")
+
+    confirmation_code = await create_code()
+
+    existing_code = db.query(models.Codes).filter(
+        models.Codes.user_id == current_user.id,
+        models.Codes.gdz_id == gdz_id
+    ).first()
+
+    if existing_code:
+        existing_code.code = confirmation_code
+        db.commit()
+        db.refresh(existing_code)
+    else:
+        code = models.Codes(
+            user_id=current_user.id,
+            gdz_id=gdz_id,
+            code=confirmation_code
+        )
+        db.add(code)
+        db.commit()
+        db.refresh(code)
+
+    return {
+        "confirmation_code": confirmation_code,
+    }
+
 async def create_code():
-    magic_numbers = [459165024, 12015732693293, 564708431199232, 4984209207, 5030919566507, 6436343, 913182202990432, 43016596437893, 260919263232, 1721036800000, 7317420470624, 325637113603999, 1165463885299, 384503446185376, 695688369300000, 57068376781824, 3276800000, 919358226007, 94606929690624, 267785184193, 616132666368, 549057842453207, 1630793025157, 829997587232, 166872925103499, 89418178782857, 282475249, 270678415700000, 8028323765901, 2310905821257, 12608989261857, 119643398733024, 169273934903501, 232596410928507, 157539780804451, 9374815985193, 132016790288107, 33554432, 64511804814368, 16850581551, 255225041939801, 7962624, 428232184832, 344394973216768, 164130859375, 114254951251968, 19254145824, 110771831604224, 50328437500000, 84459630100000, 25746925826401, 677187080078125, 12762815625, 16869854883232, 7819807277899, 82403082019807, 684539748133407, 438509757267968, 1751989905401, 393904064300000, 21276733558543, 170484759256032, 811134802948799, 6478348728125, 10762342913024, 19076162357493, 2350072823968, 24180654296875, 8241264822143, 20113571875, 14025517307, 21924480357, 872095812856093, 577484122750976, 138062368994593, 1453933568, 214504642209375, 58087429172576, 420707233300201, 201689413697376, 777862051529751, 7717186558368, 70288881159168, 45435424, 885623410917376, 370739843200000, 303830303495168, 550731776, 0, 503284375, 28153056843, 21740261540625, 15045919506432, 46343232758701, 51250179244032, 26835438303125, 329733126404001, 11031388199776, 3150905752576, 656356768, 35723051649, 380059617807, 23426639429632, 3052447761824, 242088902178993, 286871423439899, 29316250624, 108175616801, 190819266105568, 357373235801824, 127142265940832, 504176297541632, 35184372088832, 340153707591776, 235726869378749, 13382255776, 243700673461024, 254803968, 338048802503125, 350836097125051, 3251888153568, 27113235502176, 115063617043, 3125, 955802742745951, 27027081632, 109062422579232, 1516398112593, 44655137246457, 2086723682451, 248832, 1258284197543, 346531411903049, 13865791015625, 15937022465957, 65071799758899, 882735153125, 1804229351, 415728505588199, 218918170011168, 131030122140576, 11592740743, 34359738368, 86617093024, 413256880579168, 1160290625, 47206211510943, 54583205826799, 54096727596768, 53613724194557, 1234543668832, 28828730207232, 262003549978125, 103244904396875, 333870253124243, 4958844546976, 812990017201, 17623416832, 12161907769824, 296196766695424, 1783386774432, 950990049900000, 14530697473149, 68514001115625, 133009393261568, 213049392211424, 238890943128751, 163322567294976, 1016255020032, 86557035254293, 659081523200000, 192151797699599, 29122898485693, 9615801246875, 960634900447232, 104881082626957, 473168426360301, 551473077343, 204482853306368, 448816553824, 93100480721632, 733904022400000, 501292001353351, 39135393, 21507498573824, 418227202051, 2476099, 545969785934176, 672109330432, 184528125, 4219140959375, 587216781904499, 355183455415293, 1434890700000, 4817172660224, 83841135993, 102400000, 2682916351776, 24694025666157, 1601568101376, 220405380367699, 495563010115349, 4033577618432, 19933382494057, 481170140857, 976562500000, 25216079618399, 1981355655168, 741744806123232, 210162586770432, 364007458703857, 765670097875968, 2771746976768, 10896201253125, 90876845839099, 574268740309375, 4094691316893, 323604428863968, 41426511213649, 3738856210407, 145393356800000, 613813499121307, 37129300000, 9986547231968, 248587563395557, 435930295269007, 182978460024832, 194264244901, 104060420914176, 1078203909375, 43204003424, 312079600999, 34165588961549, 5177583776749, 24436261477376, 9022419900000, 79235168, 2073071593, 66203456086901, 1331705468576, 116924344228251, 515363200000, 205891132094649, 118636749824, 4346598285457, 194839193667601, 81726541495776, 59120987373568, 61232239557632, 32768, 42215564931651, 4437053125, 2956466552832, 2512087224032, 405912455021875, 283207724127657, 139091145134624, 9765625, 171702502583743, 327680000000000, 25480396800000, 189494137443357, 1544375182624, 48261724457, 69343957, 462278940896057, 61769361174093, 863169625893851, 51888844699, 786075939059993, 52658067346875, 680855473873376, 224915572827232, 796262400000, 2389769101499, 63955671886657, 1889568, 666276668105632, 31757969376, 181697103304551, 22877577568, 29718439059375, 864866612224, 629763392149, 172927194497024, 16305067506199, 8153726976, 779811265199, 39883798828125, 917841286185143, 589579257376, 1, 644877713560576, 10629803362243, 7339040224, 716703146875, 44240899506176, 3201078401357, 8569125894176, 5327648726751, 68641485507, 15575653771875, 31880020040032, 168874213376, 366240626593568, 438427732293, 321581907523757, 101629210098393, 85853323256832, 15755509298176, 610437195439776, 8793436423168, 7123848901632, 936668172433707, 10498572832032, 3200000, 38757210793632, 315574942776224, 583958095271968, 87265354185824, 124287391407299, 3004150512793, 3355443200000, 876586512998624, 55566661698801, 237304687500000, 423214420675232, 1099511627776, 590490000000000, 52521875, 26015680550432, 37656225778599, 7776, 3101364196875, 828192771461043, 265446387748607, 115856201, 1880287678125, 749652461748224, 12760903041568, 48970736047507, 142214324707157, 268925323054849, 2219006624, 72100355223951, 275992620215093, 996250626251, 571067696224224, 211602051158893, 593777798104501, 196194120249632, 4411471739168, 193491763200000, 21047953604832, 637868239809824, 753631499840625, 24953960486368, 102434508843424, 153032504292207, 1572763671875, 45072472075168, 33831290272768, 78502725751, 207307159300000, 20152428548768, 78410163603001, 9256148959232, 922519366631424, 1073741824, 732082482176, 301907333072707, 60698860931851, 5798839393557, 567880942487693, 5963102065799, 38579489651, 49420005843968, 858734025700000, 428264654900224, 11585620100000, 6302794178043, 806914547788768, 118731486838493, 773780937500000, 313592694387193, 221900662400000, 5103830227968, 389181048634368, 975248753121875, 359573803259375, 634386434595793, 938120019968, 4887597965625, 6131066257801, 794359068596875, 95388992557, 19287647677024, 175397542943776, 55730836701, 33499613519307, 38387392786601, 14029687433376, 66775157838432, 30629980039968, 353305857024, 141985700000, 844596301, 832501777613824, 6657793506607, 890169722768657, 8134236862432, 126049300576, 1121154893057, 1408514752349, 484262162790625, 701583371424, 260295579597824, 900897818976, 165682680855968, 267181325549568, 2373046875, 274212028613632, 13703429914624, 903920796800000, 200304189453125, 15386239549, 2639363440625, 208730966852651, 11445019581049, 164916224, 3303341057599, 489886517809107, 122412804495057, 154963892093, 180422935100000, 2535525376, 184267035634793, 5481173216993, 21003416576, 28536943843451, 691956144175649, 3682035745376, 401074459619393, 279581552734375, 9509900499, 292437973214432, 146465574547401, 22934500700000, 530737216068401, 312500000, 294312569464143, 14362129722368, 73328612386193, 64097340625, 881095693359375, 151921968318176, 234849287168, 11881376, 990039920079968, 5904900000, 60169205700000, 2706784157, 512908935546875, 23927190558624, 6934395700000, 662671283348601, 475922600676832, 603729159553024, 188956800000, 311620419551232, 53134176971776, 524740246980399, 111634536403125, 27393328531207, 143267759542368, 176643259120307, 16679880978201, 38020403200000, 23179525191351, 703201132946432, 146211169851, 854316678975849, 43421646275424, 446321492229251, 24883200000, 87978302634375, 1048576, 281950621875, 15220870177393, 56564242339043, 6046617600000, 19501004534375, 90145152017568, 6590815232, 281389965541376, 117825143852032, 5584059449, 908542059128901, 12166529024, 20511149, 7220115733093, 101621504799, 2196527536224, 67350802343143, 867623536069632, 74573551871875, 79723537443243, 669897728420843, 155273059182449, 59049, 470184984576, 3939040643, 8349416423424, 289254654976, 147008443, 342269084820807, 4182119424, 100000, 492718224237568, 8458700490625, 58602385427607, 100828984082432, 3077056399, 16491622400000, 263720474308576, 4084101, 59643254333849, 5559251349024, 160989426128224, 107374182400000, 3486784401, 382181572265625, 737816081880701, 481469424205824, 2234138434375, 1947195170207, 69101596310176, 256906360508832, 130691232, 1306860915625, 33038369407, 116029062500000, 2909390022551, 14693280768, 141167095653376, 199690286432, 12914277518099, 245321017971875, 147544108726432, 179155925122549, 6567580836576, 7515177189376, 13383270465632, 418211942400000, 215967833522176, 408348897330176, 47642495156224, 380204032, 240485670060032, 39505397402624, 1356926446107, 3625908203125, 4747561509943, 836828700603125, 722267302368457, 941422823431168, 20373396046299, 92389579776, 250233832892768, 558405944900000, 7028611650851, 18658757027251, 89466096875, 576650390625, 655507336820599, 32844064065625, 597080224872032, 2159424884693, 92354487127101, 10510100501, 699436681573651, 254194901951, 2470770901501, 6390089165824, 815372697600000, 28247524900000, 370967703776, 59797108943, 620610924483549, 205962976, 27960458941449, 16105100000, 210906087424, 539835356263424, 539218609632, 2887174368, 441101415279249, 398778220049, 459401384375, 305763060002949, 34842114263551, 88695903256576, 1815232161643, 158683025503232, 8587340257, 288717436800000, 77760000000000, 40265094321376, 745690248312943, 18046378835968, 70888612161949, 757627416114976, 1934917632, 847288609443, 44840334375, 30938747502499, 425733547012443, 108215668739201, 226435267111943, 183765996899, 18424351793, 48081998590625, 65635676800000, 418195493, 4678757435232, 965486581988193, 1660443030368, 27675731591168, 561550114565451, 617204725664768, 36580404888576, 32198817702743, 25937424601, 73948986280224, 353004422392832, 205236901143, 162152639684375, 50049003168, 274794888224, 227963164852224, 178689902368, 45492921326699, 56063676972832, 651948673481568, 1419857, 9494696984224, 185562860593824, 75202330366976, 657748550151, 1690522737399, 198926586778624, 1564031349, 5718076875776, 403487656379424, 223404048919701, 164499237983257, 686719856393, 433362986186976, 319569511422976, 946196763043949, 241162079949, 2727042318307, 521762160198368, 41819549300000, 8907339520949, 454244160989024, 77114156402999, 186865965446875, 841173596244576, 123347249044768, 714924299, 17647138474976, 30517578125, 336323216032, 177896043168768, 13069123200000, 24300000, 253552537600000, 957186876249, 6841192812849, 60466176, 6240321451, 13542593318343, 83084095520768, 317567202496875, 518797610148157, 1282388557824, 69693216111707, 1036579476493, 730008574608699, 379870928666624, 222620278176, 563949338624, 781960367276032, 377571474600343, 4543542400000, 931932751542176, 624032145100000, 7615646045657, 3570467226624, 46525874176, 75835343042757, 6956883693, 396282705113151, 22450667885568, 251888812787799, 229345007, 55073177600000, 2553954421743, 3408200705601, 247609900000, 398672823058432, 48524739602976, 536788889124643, 96132816409376, 154149525127168, 73439775749, 1461660310351, 14700844300000, 231043703458976, 40074642432, 373005972408101, 641365316071875, 4282490290176, 1188137600000, 28629151, 75937500000, 542895639553125, 122298103125, 537824, 229499299215625, 83769604142049, 49872566977749, 10368641602001, 368484741360099, 53782400000, 21975035404576, 714591842834375, 819628286980801, 106537938947199, 217438998607457, 290572941207901, 66338290976, 389328928768, 33170543247776, 331796531264032, 448949997868032, 430807787028125, 80386791169024, 296709280757, 32, 304316815968, 802711876996557, 309658080584951, 37294844329568, 11870966520832, 3707398432, 18866536236032, 7415771484375, 2430000000000, 234157455059968, 156403134900000, 134007957794349, 188176380824576, 42614574994432, 173726604657, 57735339232, 14872581271151, 18248690477249, 464982319140768, 320000000000, 3461619737632, 328080401001, 849917529325568, 43829741584375, 61917364224, 36227314821875, 17450185778125, 30323682702257, 14348907, 258596528100043, 168070000000000, 555275874623449, 602738989907, 16120204707168, 22691552673349, 109914468611443, 100033806792151, 135012510700000, 823901626444832, 747724704957, 98458502754149, 272440639012851, 17061555810443, 63403380965376, 129891985607, 503756397099, 14195130030907, 361785197592576, 45916502400000, 115139273278249, 1057227821024, 552159856263168, 391536859235149, 85154195684051, 31563752502501, 148628987203643, 470427017600000, 23863536599, 112502607930976, 371293, 71008211968, 761640264209507, 1382528109568, 111577100832, 507073854835593, 20821145878301, 17210368, 673534515354624, 10112638401999, 9738138110976, 2051114900000, 35529314273793, 285034864670368, 125233257600000, 11727599043051, 3973195810651, 159494694624, 11305787424768, 90224199, 1913507486176, 344730881243, 128105460519543, 140126044921875, 277782449622624, 19716245323776, 161051, 105706913843168, 2015993900449, 386836591312907, 533756191302432, 769716970979749, 62854912109375, 79064668848032, 5277319168, 120560905159375, 17254995508224, 6216455836832, 9039207968, 601692057, 97678328378368, 710778661347424, 845536520469607, 32520160641024, 899318358320899, 11040808032, 798526735563776, 2596377985024, 492359665568, 36936242722357, 15397444507424, 580713891664257, 137039689285632, 16807, 627468437145551, 41615795893, 527731916800000, 970357846472224, 46773129931232, 2817036000549, 1488827973632, 5153632, 410797025187957, 509984718910624, 243, 39129873538843, 607075765315625, 648405482564357, 113376071188007, 81054451878125, 5880511900768, 3796375994368, 4704270176, 26559922791424, 335954330625024, 5252187500000, 706981775479893, 6748994797568, 443705312500000, 1252332576, 7737809375, 2272262782976, 91613283200000, 726129685547168, 7923516800000, 35876956577824, 22211833167107, 3854601532649, 362050628125, 81136812032, 31250000000000, 995009990004999, 50787635527751, 130049362165625, 8680701550707, 527182965101, 1350125107, 1143137652768, 121484031819776, 93851287159343, 478689585080543, 246949969867776, 790208821317024, 149720237927424, 174158864690625, 72712409055232, 763633171168, 137858491849, 40649300451407, 515846550629376, 718421372338176, 12309502009375, 144327427699399, 777600000, 1211162837301, 307705639900000, 18452812500000, 67930409959424, 487067845676576, 136023078872351, 10000000000, 23675856753593, 345025251, 10240000000000, 203082291092407, 643634300000, 759375, 34502525100000, 408410100000, 52185376805024, 4156543539424, 11167913618807, 126184873719301, 12458525720576, 29419463232224, 688239954362368, 99243654300000, 17845865507007, 71492429900000, 57576099353125, 348678440100000, 298090601740625, 98465804768, 992436543, 1680700000, 1847530855424, 630919850360832, 4477117485699, 299994111526176, 129074483789824, 197556574179843, 150817888928125, 894734686126368, 600397329064743, 5638216721875, 459588151115776, 1024, 51716086897993, 76472611247968, 498420920700000, 96903107471907, 3515706497843, 20596297600000, 150536645632, 5403974828032, 9138686662951, 41036433850368, 30019840638976, 159832897686693, 62310245446624, 451590872919493, 3913539300000, 13225450646101, 95367431640625, 26286674882643, 927216502365625, 980159361278976, 456909905784375, 916132832, 228669389707, 2122825311232, 133827821568, 9861716961757, 985089730404757, 4610753397701, 104857600000, 467698329968299, 2862915100000, 216699865625, 375283169377632]
     return(random.choice(magic_numbers))
 
 async def validate_signature(
@@ -224,13 +390,102 @@ async def validate_signature(
     return decrypted == code
 
 
+async def confirm_purchase(
+        gdz_id: int,
+        signature: schemas.Signature,
+        db: orm.Session,
+        current_user: schemas.UserInDB
+):
+    gdz = await get_gdz_by_id(db, gdz_id)
+    if not gdz:
+        raise HTTPException(status_code=404, detail="ГДЗ не найдено")
+    existing_purchase = await get_purchase(db, current_user.id, gdz_id)
+    if existing_purchase:
+        raise HTTPException(status_code=400, detail="Вы уже приобрели это ГДЗ")
+
+    is_free = await is_gdz_free(db, gdz_id)
+    if is_free:
+        raise HTTPException(status_code=400, detail="Бесплатное ГДЗ не требует покупки")
+    if await validate_signature (db, current_user.id, gdz_id, signature.value):
+
+        purchase = models.Purchase(
+            buyer_id=current_user.id,
+            gdz_id=gdz_id,
+        )
+
+        db.add(purchase)
+        db.commit()
+        db.refresh(purchase)
+
+        print("добавлено")
+        return {"message": "Покупка подтверждена", "gdz_id": gdz_id}
+    else:
+        raise HTTPException(status_code=400, detail="Введено неверное значение")
+
+async def rate_gdz(
+        rating: schemas.GDZRatingIn,
+        db: orm.Session,
+        current_user: schemas.UserInDB
+):
+    gdz = (
+        db.query(models.GDZ)
+        .options(orm.joinedload(models.GDZ.user))
+        .filter_by(id=rating.gdz_id)
+        .first()
+    )
+    if not gdz:
+        raise HTTPException(404, "ГДЗ не найдено")
+
+    # Проверяем, что пользователь не владелец
+    if gdz.owner_id == current_user.id:
+        raise HTTPException(
+            status_code=400,
+            detail="Вы не можете оценивать свои ГДЗ"
+        )
+
+    has_purchased = await get_purchase(db, current_user.id, rating.gdz_id)
+    if not has_purchased and gdz.price > 0:
+        raise HTTPException(
+            status_code=403,
+            detail="Нельзя оценить ГДЗ без покупки"
+        )
+
+    existing_rating = (
+        db.query(models.GDZRating)
+        .filter_by(
+            gdz_id=rating.gdz_id,
+            user_id=current_user.id
+        )
+        .first()
+    )
+
+    if existing_rating:
+        raise HTTPException(
+            status_code=400,
+            detail="Вы уже оценивали это ГДЗ"
+        )
+
+    new_rating = models.GDZRating(
+        gdz_id=rating.gdz_id,
+        user_id=current_user.id,
+        value=rating.value
+    )
+    db.add(new_rating)
+    db.commit()
+
+    update_user_rating(db, gdz.owner_id)
+
+    return {
+        "detail": "Оценка добавлена",
+        "owner_rating": gdz.user.user_rating
+    }
+
+
 def update_user_rating(db: orm.Session, owner_id: int):
-    """Обновляет рейтинг пользователя на основе последних 5 оценок его ГДЗ"""
     user = db.query(models.User).get(owner_id)
     if not user:
         return
 
-    # Находим последние 5 оценок всех ГДЗ пользователя через связь
     ratings = (
         db.query(models.GDZRating.value)
         .join(models.GDZ)
@@ -240,7 +495,7 @@ def update_user_rating(db: orm.Session, owner_id: int):
         .all()
     )
 
-    if ratings:
+    if len(ratings) >= 5:
         avg_rating = sum(r[0] for r in ratings) / 5
         user.user_rating = round(avg_rating, 2)
     else:
@@ -256,10 +511,192 @@ def enforce_elite_access(gdz, user):
                 detail="Недостаточный рейтинг для доступа к элитному ГДЗ"
             )
 
-async def cleanup_old_gdz(db: orm.Session):
-    MAX_GDZ = 100  # Максимальное количество ГДЗ для хранения
+DRAFTS_DIR = Path("drafts")
+env = Environment(autoescape=True)
+
+
+async def save_draft(
+    db: orm.Session,
+    current_user: schemas.UserInDB,
+    data: Dict[str, Any] = Body(...)
+):
     try:
-        # Получаем общее количество ГДЗ
+        draft_data = {
+            "description": data.get("description"),
+            "full_description": data.get("full_description"),
+            "category": data["category"],
+            "subject": data.get("subject"),
+            "content_text": data.get("content_text"),
+            "price": data.get("price"),
+            "is_elite": data.get("is_elite"),
+            "gdz_id": data.get("gdz_id")
+        }
+
+        await create_or_update_draft(
+            db=db,
+            owner_id=current_user.id,
+            data=draft_data,
+        )
+        return {"status": "success"}
+
+    except Exception as e:
+        db.rollback()
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+async def create_or_update_draft(
+        db: orm.Session,
+        owner_id: int,
+        data: Dict[str, Any] = Body(...),
+) -> None:
+    print(f"Received data: {data}")
+
+    try:
+        user = db.query(models.User).filter_by(id=owner_id).first()
+        if not user:
+            print("Error: User not found")
+            raise HTTPException(status_code=404, detail="Пользователь не найден")
+
+        user.has_draft = True
+        db.commit()
+
+        draft_id = owner_id
+        filename = f"draft_{owner_id}.txt"
+        file_path = DRAFTS_DIR / filename
+
+
+        draft_content = {
+            "owner_id": owner_id,
+            "description": data.get("description", "Default description"),
+            "full_description": data.get("full_description"),
+            "category": data.get("category", "Default category"),
+            "subject": data.get("subject", "Default subject"),
+            "content_text": data.get("content_text", "Default content"),
+            "price": data.get("price", 0),
+            "is_elite": data.get("is_elite", False),
+        }
+
+        await save_draft_to_file(draft_content, file_path)
+        return
+
+    except Exception as e:
+        print(f"Error in create_or_update_draft: {str(e)}")
+        db.rollback()
+        raise HTTPException(status_code=500, detail=f"Ошибка сохранения черновика: {str(e)}")
+
+async def save_draft_to_file(draft_content: Dict[str, Any], file_path: Path) -> None:
+
+    file_path.parent.mkdir(parents=True, exist_ok=True)
+
+    template_lines = []
+    for key, value in draft_content.items():
+        if key == "is_elite":
+            template_lines.append(f'    "{key}": {{% if {key} %}}true{{% else %}}false{{% endif %}},')
+        elif isinstance(value, (int, float)) or key in ["id", "owner_id", "price"]:
+            template_lines.append(f'    "{key}": {{{{ {key} }}}},')
+        else:
+            template_lines.append(f'    "{key}": "{value}",')
+
+    template_lines[-1] = template_lines[-1].rstrip(',')
+
+    template_string = '{\n' + '\n'.join(template_lines) + '\n}'
+    print(f"Generated template string: {template_string}")
+
+    try:
+        template = env.from_string(template_string)
+        rendered_content = template.render(**draft_content)
+        print(f"Rendered content: {rendered_content}")
+
+        async with aiofiles.open(file_path.with_suffix('.txt'), "w", encoding="utf-8") as f:
+            await f.write(rendered_content)
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Ошибка сохранения: {str(e)}")
+
+async def get_draft(
+        db: orm.Session,
+        current_user: schemas.UserInDB
+):
+    user = db.query(models.User).filter_by(id=current_user.id).first()
+    if not user:
+        raise HTTPException(status_code=404, detail="Пользователь не найден")
+
+    if not user.has_draft:
+        return schemas.DraftData(
+            description="",
+            category="",
+            subject="",
+            content_text="",
+            price=0,
+            is_elite=False,
+        )
+    filename = f"draft_{current_user.id}.txt"
+    file_path = DRAFTS_DIR / filename
+
+    try:
+        data = await read_draft_from_file(Path(file_path))
+        print("data", data)
+        if data.get("owner_id") != current_user.id:
+            raise HTTPException(status_code=403, detail="Вы не можете смотреть чужие черновики")
+
+        return schemas.DraftData(
+            description=data.get("description"),
+            full_description = data.get("full_description"),
+            category=data.get("category"),
+            subject=data.get("subject"),
+            content_text=data.get("content_text"),
+            price=data.get("price"),
+            is_elite=data.get("is_elite"),
+        )
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Ошибка чтения черновика: {str(e)}")
+
+async def read_draft_from_file(file_path: Path) -> dict:
+    try:
+        async with aiofiles.open(file_path, "r", encoding="utf-8") as f:  # Изменено на utf-8
+            content = await f.read()
+            print(f"Содержимое файла черновика {file_path}: {content}")
+            return json.loads(content)
+    except json.JSONDecodeError as e:
+        print(f"Ошибка декодирования JSON {file_path}: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Некорректный JSON в черновике: {str(e)}")
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Ошибка чтения черновика: {str(e)}")
+
+
+async def cleanup_draft(db: orm.Session, owner_id: str, drafts_dir: Path = "drafts") -> None:
+    try:
+        user = db.query(models.User).filter_by(id=owner_id).first()
+        if not user:
+            raise HTTPException(status_code=404, detail="Пользователь не найден")
+
+        user.has_draft = False
+        db.commit()
+
+        drafts_dir = Path(drafts_dir) if isinstance(drafts_dir, str) else drafts_dir
+        filename = f"draft_{owner_id}.json"
+        file_path = drafts_dir / filename
+
+
+        file_path.parent.mkdir(parents=True, exist_ok=True)
+
+        async with aiofiles.open(file_path, "w", encoding="utf-8") as f:
+            await f.write("")
+
+        print(f"Содержимое файла черновика {file_path} очищено")
+
+    except Exception as e:
+        db.rollback()
+        raise HTTPException(status_code=500, detail=f"Ошибка при очистке черновика: {str(e)}")
+
+    except Exception as e:
+        db.rollback()
+        print(f"Ошибка при очистке черновика: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Ошибка при очистке черновика: {str(e)}")
+
+
+async def cleanup_old_gdz(db: orm.Session):
+    MAX_GDZ = 100
+    try:
         total = db.query(models.GDZ).count()
         print(total)
         if total > MAX_GDZ:
@@ -317,135 +754,3 @@ async def cleanup_old_gdz(db: orm.Session):
     except Exception as e:
         db.rollback()
         raise HTTPException(status_code=500, detail=f"Ошибка при очистке ГДЗ: {str(e)}")
-
-
-DRAFTS_DIR = Path("drafts")
-env = Environment(autoescape=True)
-
-async def save_draft_to_file(draft_content: Dict[str, Any], file_path: Path) -> None:
-    print(f"Draft content: {draft_content}")
-    print(f"File path: {file_path}")
-
-    # Создаем директорию, если она не существует
-    file_path.parent.mkdir(parents=True, exist_ok=True)
-
-    # Формируем шаблон с безопасной обработкой всех полей
-    template_lines = []
-    for key, value in draft_content.items():
-        if key == "gdz_id":
-            template_lines.append(f'    "{key}": {{% if {key} %}}{{{{ {key}|tojson }}}}{{% else %}}null{{% endif %}},')
-        elif key == "is_elite":
-            template_lines.append(f'    "{key}": {{% if {key} %}}true{{% else %}}false{{% endif %}},')
-        elif isinstance(value, (int, float)) or key in ["id", "owner_id", "price"]:
-            template_lines.append(f'    "{key}": {{{{ {key} }}}},')
-        else:
-            template_lines.append(f'    "{key}": "{value}",')
-
-    # Удаляем последнюю запятую
-    template_lines[-1] = template_lines[-1].rstrip(',')
-
-    # Формируем полный шаблон с обрамлением в фигурные скобки
-    template_string = '{\n' + '\n'.join(template_lines) + '\n}'
-    print(f"Generated template string: {template_string}")
-
-    try:
-        template = env.from_string(template_string)
-        rendered_content = template.render(**draft_content)
-        print(f"Rendered content: {rendered_content}")
-
-        async with aiofiles.open(file_path.with_suffix('.txt'), "w", encoding="utf-8") as f:
-            await f.write(rendered_content)
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Ошибка сохранения: {str(e)}")
-
-
-async def create_or_update_draft(
-        db: orm.Session,
-        owner_id: int,
-        data: Dict[str, Any] = Body(...),
-) -> None:
-    print(f"Received data: {data}")
-
-    try:
-        user = db.query(models.User).filter_by(id=owner_id).first()
-        if not user:
-            print("Error: User not found")
-            raise HTTPException(status_code=404, detail="Пользователь не найден")
-
-        user.has_draft = True
-        db.commit()
-
-        draft_id = owner_id
-        filename = f"draft_{owner_id}.txt"
-        file_path = DRAFTS_DIR / filename
-
-
-        draft_content = {
-            "id": draft_id,
-            "owner_id": owner_id,
-            "gdz_id": data.get("gdz_id"),
-            "description": data.get("description", "Default description"),
-            "full_description": data.get("full_description"),
-            "category": data.get("category", "Default category"),
-            "subject": data.get("subject", "Default subject"),
-            "content_text": data.get("content_text", "Default content"),
-            "price": data.get("price", 0),
-            "is_elite": data.get("is_elite", False),
-        }
-
-        await save_draft_to_file(draft_content, file_path)
-        return
-
-    except Exception as e:
-        print(f"Error in create_or_update_draft: {str(e)}")
-        db.rollback()
-        raise HTTPException(status_code=500, detail=f"Ошибка сохранения черновика: {str(e)}")
-
-
-async def read_draft_from_file(file_path: Path) -> dict:
-    try:
-        async with aiofiles.open(file_path, "r", encoding="utf-8") as f:  # Изменено на utf-8
-            content = await f.read()
-            print(f"Содержимое файла черновика {file_path}: {content}")
-            return json.loads(content)
-    except json.JSONDecodeError as e:
-        print(f"Ошибка декодирования JSON {file_path}: {str(e)}")
-        raise HTTPException(status_code=500, detail=f"Некорректный JSON в черновике: {str(e)}")
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Ошибка чтения черновика: {str(e)}")
-
-
-async def cleanup_draft(db: orm.Session, owner_id: str, drafts_dir: Path = "drafts") -> None:
-    try:
-        # Проверяем существование пользователя
-        user = db.query(models.User).filter_by(id=owner_id).first()
-        if not user:
-            raise HTTPException(status_code=404, detail="Пользователь не найден")
-
-        # Сбрасываем флаг has_draft
-        user.has_draft = False
-        db.commit()
-
-        # Формируем путь к файлу черновика
-        drafts_dir = Path(drafts_dir) if isinstance(drafts_dir, str) else drafts_dir
-        filename = f"draft_{owner_id}.json"
-        file_path = drafts_dir / filename
-
-        # Создаем директорию, если она не существует
-        file_path.parent.mkdir(parents=True, exist_ok=True)
-
-        # Очищаем содержимое файла
-        async with aiofiles.open(file_path, "w", encoding="utf-8") as f:
-            await f.write("")
-
-        print(f"Содержимое файла черновика {file_path} очищено")
-
-    except Exception as e:
-        db.rollback()
-        raise HTTPException(status_code=500, detail=f"Ошибка при очистке черновика: {str(e)}")
-
-    except Exception as e:
-        db.rollback()
-        print(f"Ошибка при очистке черновика: {str(e)}")
-        raise HTTPException(status_code=500, detail=f"Ошибка при очистке черновика: {str(e)}")
-
