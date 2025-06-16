@@ -2,7 +2,7 @@ from typing import List
 import datetime as dt
 from pydantic import BaseModel, Field, ConfigDict, field_validator
 from typing import Optional, Union
-import base64
+from datetime import datetime
 
 class User(BaseModel):
     username: str
@@ -18,7 +18,6 @@ class UserInDB (User):
     class Config:
         from_attributes = True
 
-# Модель для возвращаемого токена
 class Token(BaseModel):
     access_token: str
     token_type: str
@@ -51,13 +50,21 @@ class GDZPublic(BaseModel):
     is_elite: bool
 
 class GDZPrivate(GDZPublic):
-    content: str
+    content: Optional[str]
     full_description: str
     content_text: str
 
 class GDZRatingIn(BaseModel):
     gdz_id: int
     value: int  # от 1 до
+
+class GDZRatingOut(BaseModel):
+    gdz_id: int
+    value: int
+    created_at: datetime
+
+    model_config = ConfigDict(from_attributes=True)
+
 
 class UserProfileResponse(BaseModel):
     username: str

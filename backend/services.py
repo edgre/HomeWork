@@ -1,27 +1,27 @@
 import os
-import random
+import re
+import secrets
 from fastapi import FastAPI, HTTPException, Depends, UploadFile, Body
 from fastapi.responses import FileResponse
 from fastapi.security import OAuth2PasswordBearer
 from passlib.context import CryptContext
 from sqlalchemy import select
 from sqlalchemy import or_
+import sqlalchemy.orm as orm
 from uuid import uuid4
 import aiofiles
 import jwt
 from datetime import datetime, timedelta
-import sqlalchemy.orm as orm
-from typing import Optional
-import database as _db
+from Crypto.Util.number import bytes_to_long, long_to_bytes
+from cryptohash import sha1
 from pathlib import Path
-from typing import List, Dict, Any
+from typing import List, Dict, Any, Optional
 from jinja2 import Environment
 import json
 import asyncio
-
+import database as _db
 import models
 import schemas
-from constants import magic_numbers
 
 app = FastAPI()
 SECRET_KEY = os.environ.get("JWT_SECRET_KEY", os.urandom(32).hex())
@@ -60,7 +60,6 @@ async def create_access_token(user: models.User, expires_delta: timedelta | None
     expire = datetime.utcnow() + (expires_delta or timedelta(minutes=15))
     payload = user_obj.dict()
     payload["exp"] = expire
-    token = jwt.encode(payload, SECRET_KEY)
     token = jwt.encode(payload, SECRET_KEY, algorithm="HS256")
     return {"access_token": token}
 
@@ -84,6 +83,8 @@ async def get_profile_data(db: orm.session, user:schemas.UserInDB):
     user = db.query(models.User).filter(models.User.id == user.id).first()
     if not user:
         raise HTTPException(status_code=404, detail="User not found")
+
+    update_user_rating(db, user.id)
 
     created_gdz = db.query(models.GDZ).filter(models.GDZ.owner_id == user.id).all()
     gdz_list = []
@@ -131,6 +132,7 @@ async def get_subjects_by_category(db: orm.Session(), category: str):
     ).all()
     return [ subject.subject_name for subject in subjects]
 
+
 async def save_uploaded_file(file: UploadFile, upload_dir: str = "media") -> str:
     Path(upload_dir).mkdir(parents=True, exist_ok=True)
     file_ext = file.filename.split('.')[-1] if '.' in file.filename else 'png'
@@ -158,7 +160,7 @@ async def get_image(
 async def create_gdz(
         db: orm.Session,
         gdz_str: str,
-        file_content: UploadFile,
+        file_content: Optional[UploadFile],
         owner_id: str
 ):
     try:
@@ -173,8 +175,9 @@ async def create_gdz(
                 status_code=403,
                 detail="Недостаточный рейтинг для создания элитного ГДЗ (требуется ≥4.8)"
             )
-
-        filename = await save_uploaded_file(file_content)
+        filename = None
+        if file_content:
+            filename = await save_uploaded_file(file_content)
 
         gdz = models.GDZ(
             description=gdz_data.description,
@@ -286,7 +289,7 @@ async def get_gdz_full(
     if not gdz:
         raise HTTPException(status_code=404, detail="ГДЗ не найдено")
 
-    enforce_elite_access(gdz, current_user)
+    enforce_elite_access(db, gdz, current_user)
 
     is_free = gdz.price==0
     is_owner = gdz.owner_id == current_user.id
@@ -309,6 +312,7 @@ async def free_purchase(
     if not gdz:
         raise HTTPException(status_code=404, detail="ГДЗ не найдено")
 
+    enforce_elite_access(db, gdz, current_user)
     if gdz.price != 0:
         raise HTTPException(status_code=400, detail="Это ГДЗ не бесплатное")
 
@@ -339,6 +343,8 @@ async def purchase_gdz(
     if existing_purchase:
         raise HTTPException(status_code=400, detail="Вы уже приобрели это ГДЗ")
 
+    enforce_elite_access(db, gdz, current_user)
+
     is_free = await is_gdz_free(db, gdz_id)
     if is_free:
         raise HTTPException(status_code=400, detail="Бесплатное ГДЗ не требует покупки")
@@ -365,11 +371,12 @@ async def purchase_gdz(
         db.refresh(code)
 
     return {
-        "confirmation_code": confirmation_code,
+        "confirmation_code": str(confirmation_code),
     }
 
 async def create_code():
-    return(random.choice(magic_numbers))
+    return(secrets.randbelow(2**60))
+
 
 async def validate_signature(
         db: orm.Session,
@@ -377,17 +384,26 @@ async def validate_signature(
         gdz_id: int,
         signature: int,
 ):
-    n = 967175133182904792269960820003268370142621728469171845263028425710252738044931468967566271
-    e = 5
+    n = 160301046244593794374726426877457303604019537423736458260136643925405546154653037172463089669436445456557499425029994701102494179131569495553118775092473011745647436677950345054183103280168169605050154349614937369702539109115434630721210013794356412532578527347021846882486616784364644818143571566741240343519
+    e = 3
+
+    keylength = len(long_to_bytes(n))
+    decrypted = pow(signature, e, n)
+    clearsig = decrypted.to_bytes(keylength, 'big')
+    r = re.compile(b'\x00\x01\xff+?\x00(.{20})', re.DOTALL)
+    m = r.match(clearsig)
+
     code = db.execute(
         select(models.Codes.code)
         .where(models.Codes.user_id == user_id)
         .where(models.Codes.gdz_id == gdz_id)
     ).scalar()
-
-    decrypted = pow(signature, e, n)
-    print(decrypted, code)
-    return decrypted == code
+    print(m.group(1), bytes.fromhex(sha1(code)))
+    if not m:
+        return False
+    if m.group(1) != bytes.fromhex(sha1(code)):
+        return False
+    return True
 
 
 async def confirm_purchase(
@@ -427,6 +443,7 @@ async def rate_gdz(
         db: orm.Session,
         current_user: schemas.UserInDB
 ):
+    # Получаем ГДЗ со связью с владельцем
     gdz = (
         db.query(models.GDZ)
         .options(orm.joinedload(models.GDZ.user))
@@ -435,6 +452,8 @@ async def rate_gdz(
     )
     if not gdz:
         raise HTTPException(404, "ГДЗ не найдено")
+
+    enforce_elite_access(db, gdz, current_user)
 
     # Проверяем, что пользователь не владелец
     if gdz.owner_id == current_user.id:
@@ -450,6 +469,7 @@ async def rate_gdz(
             detail="Нельзя оценить ГДЗ без покупки"
         )
 
+    # Проверяем, не оценивал ли уже пользователь это ГДЗ
     existing_rating = (
         db.query(models.GDZRating)
         .filter_by(
@@ -465,14 +485,17 @@ async def rate_gdz(
             detail="Вы уже оценивали это ГДЗ"
         )
 
+    # Создаем оценку
     new_rating = models.GDZRating(
         gdz_id=rating.gdz_id,
         user_id=current_user.id,
-        value=rating.value
+        value=rating.value,
+        created_at=datetime.utcnow()
     )
     db.add(new_rating)
     db.commit()
 
+    # Обновляем рейтинг автора ГДЗ
     update_user_rating(db, gdz.owner_id)
 
     return {
@@ -486,31 +509,35 @@ def update_user_rating(db: orm.Session, owner_id: int):
     if not user:
         return
 
+    five_minutes_ago = datetime.utcnow() - timedelta(minutes=5)
+
     ratings = (
         db.query(models.GDZRating.value)
         .join(models.GDZ)
         .filter(models.GDZ.owner_id == owner_id)
-        .order_by(models.GDZRating.id.desc())
-        .limit(5)
+        .filter(models.GDZRating.created_at >= five_minutes_ago)
+        .order_by(models.GDZRating.created_at.desc())
         .all()
     )
 
     if len(ratings) >= 5:
-        avg_rating = sum(r[0] for r in ratings) / 5
+        avg_rating = sum(r[0] for r in ratings) / len(ratings)
         user.user_rating = round(avg_rating, 2)
     else:
         user.user_rating = 0.0
 
     db.commit()
 
-def enforce_elite_access(gdz, user):
+def enforce_elite_access(db: orm.Session, gdz, user):
+    # Обновляем рейтинг пользователя перед проверкой
+    
+    update_user_rating(db, user.id)
     if gdz.is_elite and gdz.owner_id != user.id:
         if user.user_rating is None or user.user_rating < 4.8:
             raise HTTPException(
                 status_code=403,
                 detail="Недостаточный рейтинг для доступа к элитному ГДЗ"
             )
-
 DRAFTS_DIR = Path("drafts")
 env = Environment(autoescape=True)
 
@@ -527,7 +554,7 @@ async def save_draft(
             "category": data["category"],
             "subject": data.get("subject"),
             "content_text": data.get("content_text"),
-            "price": data.get("price"),
+            "price": data.get("price"),  # Может быть None
             "is_elite": data.get("is_elite"),
             "gdz_id": data.get("gdz_id")
         }
@@ -545,16 +572,13 @@ async def save_draft(
 
 
 async def create_or_update_draft(
-        db: orm.Session,
-        owner_id: int,
-        data: Dict[str, Any] = Body(...),
+    db: orm.Session,
+    owner_id: int,
+    data: Dict[str, Any] = Body(...),
 ) -> None:
-    print(f"Received data: {data}")
-
     try:
         user = db.query(models.User).filter_by(id=owner_id).first()
         if not user:
-            print("Error: User not found")
             raise HTTPException(status_code=404, detail="Пользователь не найден")
 
         user.has_draft = True
@@ -564,15 +588,14 @@ async def create_or_update_draft(
         filename = f"draft_{owner_id}.txt"
         file_path = DRAFTS_DIR / filename
 
-
         draft_content = {
             "owner_id": owner_id,
-            "description": data.get("description", "Default description"),
+            "description": data.get("description", ""),
             "full_description": data.get("full_description"),
-            "category": data.get("category", "Default category"),
-            "subject": data.get("subject", "Default subject"),
-            "content_text": data.get("content_text", "Default content"),
-            "price": data.get("price", 0),
+            "category": data.get("category", ""),
+            "subject": data.get("subject", ""),
+            "content_text": data.get("content_text", ""),
+            "price": data.get("price"),  # Сохраняем как есть (может быть None)
             "is_elite": data.get("is_elite", False),
         }
 
@@ -580,37 +603,31 @@ async def create_or_update_draft(
         return
 
     except Exception as e:
-        print(f"Error in create_or_update_draft: {str(e)}")
         db.rollback()
         raise HTTPException(status_code=500, detail=f"Ошибка сохранения черновика: {str(e)}")
 
 async def save_draft_to_file(draft_content: Dict[str, Any], file_path: Path) -> None:
-
     file_path.parent.mkdir(parents=True, exist_ok=True)
 
     template_lines = []
     for key, value in draft_content.items():
         if key == "is_elite":
             template_lines.append(f'    "{key}": {{% if {key} %}}true{{% else %}}false{{% endif %}},')
+        elif value is None:
+            template_lines.append(f'    "{key}": null,')
         elif isinstance(value, (int, float)) or key in ["id", "owner_id", "price"]:
             template_lines.append(f'    "{key}": {{{{ {key} }}}},')
         else:
-            template_lines.append(f'    "{key}": "{value}",')
+            template_lines.append(f'    "{key}": "{{{{ {key} }}}}",')
 
     template_lines[-1] = template_lines[-1].rstrip(',')
 
     template_string = '{\n' + '\n'.join(template_lines) + '\n}'
-    print(f"Generated template string: {template_string}")
+    template = env.from_string(template_string)
+    rendered_content = template.render(**draft_content)
 
-    try:
-        template = env.from_string(template_string)
-        rendered_content = template.render(**draft_content)
-        print(f"Rendered content: {rendered_content}")
-
-        async with aiofiles.open(file_path.with_suffix('.txt'), "w", encoding="utf-8") as f:
-            await f.write(rendered_content)
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Ошибка сохранения: {str(e)}")
+    async with aiofiles.open(file_path.with_suffix('.txt'), "w", encoding="utf-8") as f:
+        await f.write(rendered_content)
 
 async def get_draft(
         db: orm.Session,
@@ -754,3 +771,19 @@ async def cleanup_old_gdz(db: orm.Session):
     except Exception as e:
         db.rollback()
         raise HTTPException(status_code=500, detail=f"Ошибка при очистке ГДЗ: {str(e)}")
+
+async def get_user_gdz_ratings_last(db: orm.Session, user_id: int) -> List[schemas.GDZRatingOut]:
+    five_minutes_ago = datetime.utcnow() - timedelta(minutes=5)
+
+    # Базовый запрос
+    query = (
+        db.query(models.GDZRating)
+        .join(models.GDZ)
+        .filter(models.GDZ.owner_id == user_id)
+        .filter(models.GDZRating.created_at >= five_minutes_ago)
+    )
+
+    ratings = query.order_by(models.GDZRating.created_at.asc()).all()
+    
+    # Преобразуем в Pydantic модель
+    return [schemas.GDZRatingOut.from_orm(rating) for rating in ratings]

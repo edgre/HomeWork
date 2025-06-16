@@ -29,7 +29,7 @@
   font-weight: 400;
   transition: background-color 0.3s ease;
   cursor: pointer;
-  transition: border-color 0.3s;
+  transition: opacity 0.2s ease;
 }
 
 .dropdown-select:focus {
@@ -40,4 +40,44 @@
 .dropdown-select:disabled {
   background-color: var(--clr-grey-2);
   color: var(--clr-dark-half);
+}
+
+.skeleton-select {
+  height: 44px;
+  width: 280px;
+  border: none;
+  border-radius: 12px;
+  background-color: var(--clr-grey-1);
+  overflow: hidden;
+  opacity: 0;
+  animation: fadeIn 0.2s ease forwards; /* Плавное появление скелетона */
+}
+
+.skeleton-placeholder {
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(90deg, var(--clr-grey-2) 25%, var(--clr-grey-1) 50%, var(--clr-grey-2) 75%);
+  background-size: 200% 100%;
+  animation: skeleton-loading 1.5s infinite;
+}
+
+@keyframes skeleton-loading {
+  0% {
+    background-position: 200% 0;
+  }
+  100% {
+    background-position: -200% 0;
+  }
+}
+
+@keyframes fadeIn {
+  to {
+    opacity: 1;
+  }
+}
+
+.error {
+  color: red;
+  font-size: 14px;
+  margin-top: 8px;
 }

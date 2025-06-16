@@ -6,7 +6,7 @@ from services import get_db
 import services
 import models
 import schemas
-from typing import List, Dict, Any
+from typing import List, Dict, Optional, Any
 from fastapi import Depends, status
 from sqlalchemy.orm import Session
 from pathlib import Path
@@ -71,11 +71,13 @@ async def get_subjects_by_category(
     category: str,
     db: Session = Depends(get_db)
 ):
-    return await services.get_subjects_by_category(db, category)
+    a = await services.get_subjects_by_category(db, category)
+    print(a)
+    return (a)
 
 @app.post("/gdz/create")
 async def create_gdz_en(
-        content_file: UploadFile = File(...),
+        content_file: UploadFile = File(None),
         gdz_str: str = Form(...),
         db: orm.Session = Depends(get_db),
         current_user=Depends(services.get_current_user)
@@ -164,6 +166,13 @@ async def get_draft(
 ):
     return await services.get_draft(db, current_user)
 
+@app.get("/gdz/my/ratings", response_model=List[schemas.GDZRatingOut])
+async def get_my_gdz_ratings(
+    db: orm.Session = Depends(get_db),
+    current_user: models.User = Depends(services.get_current_user)
+):
+    ratings = await services.get_user_gdz_ratings_last(db, current_user.id)
+    return ratings
 
 @app.get("/")
 async def root():

@@ -36,7 +36,7 @@ class GDZ(db.Base):
     full_description = sql.Column(sql.String(250), nullable=False)
     category =  sql.Column(sql.String(250), nullable=False)
     price = sql.Column(sql.Integer)
-    content = sql.Column(sql.String(100), nullable=False)
+    content = sql.Column(sql.String(100), nullable=True)
     content_text = sql.Column(sql.String(1000), nullable=False)
     is_elite = sql.Column(sql.Boolean, default=False, nullable=False)
 
@@ -62,6 +62,7 @@ class GDZRating(db.Base):
     gdz_id = sql.Column(sql.Integer, sql.ForeignKey('gdz.id'))
     user_id = sql.Column(sql.Integer, sql.ForeignKey('users.id'))
     value = sql.Column(sql.Float, nullable=False)
+    created_at = sql.Column(sql.DateTime, nullable=False)
 
     # Связи
     gdz = orm.relationship("GDZ")
@@ -73,7 +74,7 @@ class Codes(db.Base):
     id = sql.Column(sql.Integer, primary_key=True, index=True)
     gdz_id = sql.Column(sql.Integer, sql.ForeignKey('gdz.id'))
     user_id = sql.Column(sql.Integer, sql.ForeignKey('users.id'))
-    code = sql.Column(sql.String(100), nullable=False)
+    code = sql.Column(sql.String(1000), nullable=False)
 
     user = orm.relationship("User")
     gdz = orm.relationship("GDZ")
