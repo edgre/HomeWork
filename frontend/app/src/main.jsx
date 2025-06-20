@@ -7,10 +7,10 @@ import AuthPage from "./pages/AuthPage.jsx";
 import HomePage from "./pages/HomePage.jsx";
 import CategoryPage from "./pages/CategoryPage.jsx";
 import ProfilePage from "./pages/ProfilePage.jsx";
-import NotFoundPage from "./pages/Notfoundpage.jsx";
+import NotFoundPage from "./pages/NotFoundPage.jsx";
 import TaskPage from "./pages/TaskPage.jsx";
 import TaskCreatePage from "./pages/TaskCreatePage.jsx";
-import GdzPage from "./pages/GdzPage";
+import GdzPage from "./pages/GDZPage";
 import ProtectedRoute from "./pages/ProtectedRoute"; // Импортируем новый компонент
 
 const router = createBrowserRouter([
