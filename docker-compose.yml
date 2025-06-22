@@ -1,0 +1,28 @@
+
+services:
+  backend:
+    build:
+      context: .
+      dockerfile: Dockerfile.backend
+    ports:
+      - "8000:8000" # Оставляем для тестирования, но можно убрать, если Caddy используется как прокси
+    volumes:
+      - ./backend/db:/app/db
+
+    networks:
+      - ctf-network
+
+  frontend:
+    build:
+      context: .
+      dockerfile: Dockerfile.frontend
+    ports:
+      - "80:80" # Caddy работает на порту 80
+    depends_on:
+      - backend
+    networks:
+      - ctf-network
+
+networks:
+  ctf-network:
+    driver: bridge
