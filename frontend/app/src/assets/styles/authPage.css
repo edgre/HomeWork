@@ -199,5 +199,5 @@ input:checked + .slider:before {
 .inputBox:hover::before {
   background-color: var(--clr-grey-0);
   border-color: var(--clr-accent-hover);
-
+}
 
