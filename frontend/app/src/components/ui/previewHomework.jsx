@@ -58,7 +58,7 @@ const PreviewHomework = ({ gdzId, onClose, flagToNotSetRating = 0, isStandaloneP
                 setData({
                     taskText: gdzData.full_description,
                     answerText: gdzData.content_text,
-                    photoUrl: `/${gdzData.content}`,
+                    photoUrl: gdzData.content,
                     isLoading: false,
                     error: null,
                     ownerId: gdzData.owner_id

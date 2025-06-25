@@ -5,10 +5,11 @@ services:
       context: .
       dockerfile: Dockerfile.backend
     ports:
-      - "8000:8000" # Оставляем для тестирования, но можно убрать, если Caddy используется как прокси
+      - "8000:8000"
     volumes:
       - ./backend/db:/app/db
-
+      - ./backend/media:/app/media
+      - ./backend/drafts:/app/drafts
     networks:
       - ctf-network
 

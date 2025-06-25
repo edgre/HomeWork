@@ -23,13 +23,13 @@ const HomeWorkPanel = ({
     const [error, setError] = useState(null);
     const [showGdz, setShowGdz] = useState(false);
     const [isOwner, setIsOwner] = useState(false);
+    const [localHasPurchased, setLocalHasPurchased] = useState(has_purchased); // Добавляем локальное состояние
     const { slug } = useParams();
     const navigate = useNavigate();
     const location = useLocation();
     const { user } = useContext(UserContext);
     const token = localStorage.getItem("access_token");
 
-    // Проверка, является ли пользователь владельцем ГДЗ
     useEffect(() => {
         if (user?.id && ownerId === user.id) {
             setIsOwner(true);
@@ -89,15 +89,13 @@ const HomeWorkPanel = ({
         setError(null);
         setShowGdz(false);
 
-
-        // Сохраняем текущий путь перед открытием ГДЗ
         const currentPath = returnPath || location.pathname;
         localStorage.setItem('returnPath', currentPath);
 
-        if (isOwner || price === 0 || has_purchased) {
-            // Для бесплатных ГДЗ создаем запись о покупке, если ее еще нет
-            if (price === 0 && !has_purchased && !isOwner) {
+        if (isOwner || price === 0 || localHasPurchased) { // Используем localHasPurchased
+            if (price === 0 && !localHasPurchased && !isOwner) {
                 await registerFreePurchase();
+                setLocalHasPurchased(true); // Обновляем состояние после успешной покупки
             }
             setShowGdz(true);
             setModalActive(true);
@@ -120,7 +118,6 @@ const HomeWorkPanel = ({
         setError(null);
         setShowGdz(false);
 
-        // При закрытии модального окна возвращаемся на предыдущую страницу
         const savedPath = localStorage.getItem('returnPath');
         if (savedPath) {
             navigate(savedPath);
@@ -129,6 +126,7 @@ const HomeWorkPanel = ({
     };
 
     const handlePaymentSuccess = () => {
+        setLocalHasPurchased(true);
         setShowGdz(true);
         setNonce(null);
     };
@@ -138,7 +136,7 @@ const HomeWorkPanel = ({
             <Modal active={modalActive} setActive={closeModal}>
                 {error ? (
                     <div>{error}</div>
-                ) : showGdz || isOwner || price === 0 || has_purchased ? (
+                ) : showGdz || isOwner || price === 0 || localHasPurchased ? (
                     <PreviewHomework
                         gdzId={gdzId || number}
                         setActive={closeModal}
@@ -168,7 +166,7 @@ const HomeWorkPanel = ({
                     onClick={handleButtonClick}
                 >
                     {isOwner ? "Просмотреть ГДЗ" :
-                     has_purchased ? "Посмотреть ГДЗ" :
+                     localHasPurchased ? "Посмотреть ГДЗ" :
                      price === 0 ? "Бесплатно" :
                      price + " руб"}
                 </button>

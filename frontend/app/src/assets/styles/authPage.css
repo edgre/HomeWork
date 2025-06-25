@@ -51,19 +51,18 @@
   transform: scale(0.95);
 }
 
-/* Контейнер ошибок */
 .auth-error-container {
-  position: relative;
-  display: flex;
-  padding: 10px;
-  margin: 10px;
+  width: 100%;
+  max-width: 400px;
+  margin: 16px auto 0;
+  padding: 12px;
   border-radius: 30px;
-  align-items: center;
   color: var(--clr-light);
   background-color: rgb(45, 45, 45);
+  text-align: center;
+  box-sizing: border-box;
 }
 
-/* Заголовок страницы */
 .auth-page-title {
   text-align: center;
   margin-bottom: 24px;

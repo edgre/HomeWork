@@ -113,14 +113,14 @@ const HomeworkCreate = () => {
 
     try {
       const draftData = {
-        category: validateInput(selectedCategory) || "", // Обязательное поле, пустая строка, если не заполнено
+        category: validateInput(selectedCategory) || "",
         subject: validateInput(selectedSubcategory) || "",
         description: validateInput(shortDescription) || "",
         full_description: validateInput(fullDescription) || "",
         content_text: validateInput(shortAnswer) || "",
         price: parseInt(price) || 0,
         is_elite: isElite,
-        gdz_id: null, // По умолчанию null, как в schemas.DraftData
+        gdz_id: null,
       };
 
       const response = await fetch("/api/gdz/save_draft", {

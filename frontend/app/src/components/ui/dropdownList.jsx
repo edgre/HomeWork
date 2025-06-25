@@ -4,12 +4,19 @@ import "../../assets/styles/dropDown.css";
 import "../../assets/styles/authPage.css";
 
 const DropdownList = ({ onCategoryChange, onSubcategoryChange, initialCategory, initialSubcategory }) => {
-  const [selectedCategory, setSelectedCategory] = useState(initialCategory || "");
-  const [selectedSubcategory, setSelectedSubcategory] = useState(initialSubcategory || "");
+  const [selectedCategory, setSelectedCategory] = useState("");
+  const [selectedSubcategory, setSelectedSubcategory] = useState("");
   const [categories, setCategories] = useState([]);
   const [subcategories, setSubcategories] = useState([]);
   const [loading, setLoading] = useState(false);
+  const [subcategoriesLoading, setSubcategoriesLoading] = useState(false);
   const [error, setError] = useState(null);
+
+  // Инициализация начальных значений
+  useEffect(() => {
+    setSelectedCategory(initialCategory || "");
+    setSelectedSubcategory(initialSubcategory || "");
+  }, [initialCategory, initialSubcategory]);
 
   // Загрузка категорий при монтировании компонента
   useEffect(() => {
@@ -17,7 +24,7 @@ const DropdownList = ({ onCategoryChange, onSubcategoryChange, initialCategory, 
       setLoading(true);
       try {
         const response = await axios.get("api/category");
-        setCategories(response.data); // Предполагаем, что возвращается массив строк
+        setCategories(response.data);
         setError(null);
       } catch (err) {
         setError("Ошибка при загрузке категорий");
@@ -30,38 +37,33 @@ const DropdownList = ({ onCategoryChange, onSubcategoryChange, initialCategory, 
     fetchCategories();
   }, []);
 
-  // Синхронизация начальных значений
-  useEffect(() => {
-    if (initialCategory && initialCategory !== selectedCategory) {
-      setSelectedCategory(initialCategory);
-      onCategoryChange(initialCategory);
-    }
-    if (initialSubcategory && initialSubcategory !== selectedSubcategory) {
-      setSelectedSubcategory(initialSubcategory);
-      onSubcategoryChange(initialSubcategory);
-    }
-  }, [initialCategory, initialSubcategory, onCategoryChange, onSubcategoryChange]);
-
   // Загрузка подкатегорий при изменении selectedCategory
   useEffect(() => {
+    const controller = new AbortController();
+
     if (selectedCategory) {
       const fetchSubcategories = async () => {
-        setLoading(true);
-        try {
-          const response = await axios.get(`api/subjects/${selectedCategory}`);
-          setSubcategories(response.data); // Предполагаем, что возвращается массив строк
-          setError(null);
+        setSubcategoriesLoading(true);
+        setSubcategories([]); // Очищаем перед загрузкой новых
 
-          // Если initialSubcategory есть, но не входит в новый список подкатегорий, сбрасываем её
-          if (initialSubcategory && !response.data.includes(initialSubcategory)) {
-            setSelectedSubcategory("");
-            onSubcategoryChange("");
+        try {
+          const response = await axios.get(`api/subjects/${selectedCategory}`, {
+            signal: controller.signal
+          });
+
+          if (Array.isArray(response.data)) {
+            setSubcategories(response.data);
+            setError(null);
+          } else {
+            throw new Error("Некорректный формат данных подкатегорий");
           }
         } catch (err) {
-          setError("Ошибка при загрузке предметов");
-          console.error(err);
+          if (!axios.isCancel(err)) {
+            setError("Ошибка при загрузке предметов");
+            console.error(err);
+          }
         } finally {
-          setLoading(false);
+          setSubcategoriesLoading(false);
         }
       };
 
@@ -71,14 +73,14 @@ const DropdownList = ({ onCategoryChange, onSubcategoryChange, initialCategory, 
       setSelectedSubcategory("");
       onSubcategoryChange("");
     }
-  }, [selectedCategory, initialSubcategory, onSubcategoryChange]);
+
+    return () => controller.abort();
+  }, [selectedCategory, onSubcategoryChange]);
 
   const handleCategoryChange = (e) => {
     const value = e.target.value;
     setSelectedCategory(value);
-    setSelectedSubcategory(""); // Сбрасываем подкатегорию при смене категории
     onCategoryChange(value);
-    onSubcategoryChange(""); // Сбрасываем подкатегорию в родительском компоненте
   };
 
   const handleSubcategoryChange = (e) => {
@@ -87,42 +89,62 @@ const DropdownList = ({ onCategoryChange, onSubcategoryChange, initialCategory, 
     onSubcategoryChange(value);
   };
 
+  // Скелетон для загрузки
+  const SkeletonLoader = ({ height = "40px", width = "100%" }) => (
+    <div
+      className="skeleton-loader"
+      style={{
+        height,
+        width,
+        backgroundColor: "#f0f0f0",
+        borderRadius: "4px",
+        animation: "pulse 1.5s infinite ease-in-out"
+      }}
+    />
+  );
+
   return (
     <>
       <div className="form-group">
-        <select
-          className="dropdown-select"
-          value={selectedCategory}
-          onChange={handleCategoryChange}
-          disabled={loading}
-        >
-          <option value="">Выберите категорию</option>
-          {categories.map((category) => (
-            <option key={category} value={category}>
-              {category}
-            </option>
-          ))}
-        </select>
-        {loading && <p>Загрузка...</p>}
+        {loading ? (
+          <SkeletonLoader height="40px" />
+        ) : (
+          <select
+            className="dropdown-select"
+            value={selectedCategory}
+            onChange={handleCategoryChange}
+          >
+            <option value="">Выберите категорию</option>
+            {categories.map((category) => (
+              <option key={category} value={category}>
+                {category}
+              </option>
+            ))}
+          </select>
+        )}
         {error && <p className="error">{error}</p>}
       </div>
 
       <div className="form-group">
-        <select
-          className="dropdown-select"
-          value={selectedSubcategory}
-          onChange={handleSubcategoryChange}
-          disabled={!selectedCategory || loading}
-        >
-          <option value="">
-            {selectedCategory ? "Выберите предмет" : "Сначала выберите категорию"}
-          </option>
-          {subcategories.map((subcategory) => (
-            <option key={subcategory} value={subcategory}>
-              {subcategory}
+        {subcategoriesLoading ? (
+          <SkeletonLoader height="40px" />
+        ) : (
+          <select
+            className="dropdown-select"
+            value={selectedSubcategory}
+            onChange={handleSubcategoryChange}
+            disabled={!selectedCategory}
+          >
+            <option value="">
+              {selectedCategory ? "Выберите предмет" : "Сначала выберите категорию"}
             </option>
-          ))}
-        </select>
+            {subcategories.map((subcategory) => (
+              <option key={subcategory} value={subcategory}>
+                {subcategory}
+              </option>
+            ))}
+          </select>
+        )}
       </div>
     </>
   );

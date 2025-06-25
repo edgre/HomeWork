@@ -12,7 +12,8 @@ const HomeWorkPanel = ({ subject, taskText, gdzId }) => {
     return (
         <div className="hwPanel">
             <Modal active={modalActive} setActive={setModalActive}>
-                <PreviewHomework gdzId={gdzId} />
+                <PreviewHomework gdzId={gdzId}
+                 onClose={() => setModalActive(false)}/>
             </Modal>
 
             <div className="taskText">

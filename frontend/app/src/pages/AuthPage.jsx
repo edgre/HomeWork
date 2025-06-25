@@ -108,6 +108,7 @@ const AuthPage = () => {
     e.preventDefault();
     setError("");
 
+    try {
     if (isRegistering) {
       if (!realname || !username || !password) {
         setError("Пожалуйста, заполните все поля");
@@ -121,7 +122,10 @@ const AuthPage = () => {
       }
       await handleLogin();
     }
-  };
+  } catch (err) {
+    setError(err.message); // Ловим все ошибки здесь
+  }
+};
 
   return (
     <div className="container">

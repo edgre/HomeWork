@@ -146,7 +146,7 @@ async def save_uploaded_file(file: UploadFile, upload_dir: str = "media") -> str
                     await buffer.write(chunk)
         except Exception as e:
             raise HTTPException(500, detail=f"Ошибка при сохранении файла: {str(e)}")
-        path = f'images/{filename}'
+        path = f'/api/images/{filename}'
         print(path)
         return path
 
