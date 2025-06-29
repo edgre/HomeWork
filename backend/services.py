@@ -539,7 +539,7 @@ def enforce_elite_access(db: orm.Session, gdz, user):
                 detail="Недостаточный рейтинг для доступа к элитному ГДЗ"
             )
 DRAFTS_DIR = Path("drafts")
-env = Environment(autoescape=True)
+env = Environment(autoescape=False)
 
 
 async def save_draft(

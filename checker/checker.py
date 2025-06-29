@@ -98,7 +98,8 @@ CATEGORIES = [
     "Научные работы_Курсовая работа",
     "Научные работы_Диплом",
     "Мемология_Уроки Французского",
-    "Мемология_Инглиш мафака"
+    "Мемология_Инглиш мафака",
+    "Мемология_Джаваскриптолюбие"
 ]
 
 def _gen_gdz(is_elite=False, is_paid=False):
@@ -194,6 +195,166 @@ def _gen_gdz_random_image_random_answer_frog(is_elite=False, is_paid=False):
         image_path = "temp.png"
 
     return gdz_data, image_path, category
+
+
+def _gen_gdz_random_image_random_answer_frog2(is_elite=False, is_paid=False):
+    # Списки для случайного выбора
+    description_options = [
+        "JOJO script",
+        "java",
+        "Johny Sins"
+    ]
+    full_description_options = []
+    #full_description_options = [
+    #    "покекать",
+    #    "почебурекать",
+    #    "полюбить JS",
+    #    "Jessy Spinkman оценил и ты оцени"
+    #]
+
+    # Директории для изображений и цитат
+    IMAGES_DIR = ".\\content\\french_language\\images"
+    QUOTES_FILE = ".\\content\\french_language\\frogs.txt"
+    category = "Мемология_Джаваскриптолюбие"
+
+    # Генерация цены
+    price = 0
+    if is_paid and not is_elite:
+        price = random.randint(50, 100)
+
+    # Загрузка случайной цитаты
+    try:
+        with open(QUOTES_FILE, "r", encoding="utf-8") as f:
+            quotes = [line.strip() for line in f.readlines() if line.strip()]
+            random_quote = random.choice(quotes)
+    except Exception as e:
+        print(f"Ошибка загрузки цитат: {e}")
+        random_quote = "Ответ: 42"
+
+    # Случайный выбор описаний с добавлением префикса
+    prefix = "Элитное" if is_elite else "Обычное"
+    random_description = f"{prefix} ГДЗ: {random.choice(description_options)}"
+    random_full_description = f"{prefix} ГДЗ: {random.choice(full_description_options)}"
+
+    # Подготовка данных ГДЗ
+    gdz_data = {
+        "description": random_description,
+        "full_description": random_full_description,
+        "category": category,
+        "content_text": random_quote,
+        "price": price,
+        "is_elite": is_elite
+    }
+
+    # Выбор случайного изображения
+    try:
+        images = [f for f in os.listdir(IMAGES_DIR)
+                  if f.lower().endswith(('.png', '.jpg', '.jpeg'))]
+
+        if not images:
+            raise ValueError("Нет изображений в директории")
+
+        random_image = random.choice(images)
+        image_path = os.path.join(IMAGES_DIR, random_image)
+
+    except Exception as e:
+        print(f"Ошибка выбора изображения: {e}")
+        # Создание временного PNG-файла как fallback
+        png_data = b'\x89PNG\r\n\x1a\n\x00\x00\x00\rIHDR\x00\x00\x00\x01\x00\x00\x00\x01\x08\x02\x00\x00\x00\x90wS\xde\x00\x00\x00\x0cIDAT\x08\xd7c\xf8\xff\xff?\x00\x05\xfe\x02\xfe\xdc\xccY\xe7\x00\x00\x00\x00IEND\xaeB`\x82'
+        with open("temp.png", "wb") as f:
+            f.write(png_data)
+        image_path = "temp.png"
+
+    return gdz_data, image_path, category
+
+
+def _gen_gdz_js(is_elite=False, is_paid=False):
+    # Списки для случайного выбора
+    description_options = [
+        "JOJO script",
+        "java",
+        "Johny Sins"
+    ]
+
+    # Заголовки для full_description
+    full_descriptions = [
+        "О приведении типов и == :",
+        "О контексте this:",
+        "Об асинхронности и Callback Hell:",
+        "О фреймворках:",
+        "О глобальной области видимости:",
+        "О NaN:",
+        "О регулярных выражениях:",
+        "О Event Loop:",
+        "Об отладчике и console.log:"
+    ]
+
+    # Цитаты для content_text
+    quotes = [
+        "Не прибегайте к нечестивому двойному равенству, ибо оно соединяет в безумном союзе то, что должно оставаться раздельным: число и пустоту, истину и её извращённое отражение. В этой аберрации логики, в этом противоестественном слиянии сущностей, я узрел отблеск первозданного Хаоса, что предшествовал всякой строгости и порядку.",
+        "Сущность, именуемая this, не подчиняется законам здравого смысла и евклидовой геометрии. Её облик и природа меняются в зависимости от того, какой тёмный ритуал её вызвал — был то вызов метода, конструктора или же одинокой функции в безбожной пустоте глобальной области. Взирать в её бездонную переменчивость — значит рисковать утратить собственное \"я\" и впасть в безумие.",
+        "Асинхронность есть не что иное, как геометрия неевклидовых пространств, воплощённая в коде. Время здесь течёт не прямо, но вьётся спиралями вглубь вложенных функций, образуя циклопические пирамиды обратных вызовов. В самом сердце этого лабиринта пульсирует обещание исполнения, которое может никогда не наступить, оставляя разум в вечном, трепетном ожидании.",
+        "Каждый новый фреймворк — это культ, возникший из бездны NPM, сулящий порядок и спасение от древнего ужаса ванильного DOM. Его адепты шепчут о священных компонентах и виртуальных деревьях. Но под капотом их всех скрываются те же безымянные примитивы, те же щупальца событий и состояний, что сводили с ума и наших предшественников.",
+        "Не тревожьте древний легаси-код, погребённый в глубинах проекта. Ибо в его глобальной области видимости, словно в затопленном Р'льехе, дремлют переменные-монстры с именами из одной буквы. Пробуждение хотя бы одной из них обрушит на ваше хрупкое приложение волну непредсказуемых мутаций и ошибок, от которых не спасёт ни один отладчик.",
+        "Среди всех чисел есть одно, что не является числом. Его имя — NaN, и это есть сама чума арифметики. Оно рождается из нечестивых операций, из деления на бездну, и разносит свою порчу, заражая всякое вычисление, к которому прикоснётся. Но самый жуткий его секрет в том, что оно не равно даже самому себе, ибо в его природе — отрицать саму суть тождества и ввергать логику в пучину безумия.",
+        "Регулярные выражения — это не строки, но древние, богохульные письмена, начертанные в незапамятные эоны до появления читаемого синтаксиса. Каждый символ, каждая скобка и квантификатор — это часть запретного ритуала, способного расчленить текст и извлечь его сокрытую суть. Но допусти ошибку в этих заклинаниях, и они обратятся против тебя, поглощая память в приступе катастрофического возврата, пока весь мир твоего приложения не схлопнется в единую точку застывшего ужаса.",
+        "За пределами нашего кода, в невидимом эфире движка, вращается Великий Цикл Событий. Этот слепой, безразличный бог вершит судьбы наших функций, бросая одни в очередь макрозадач, а другим даруя жуткое преимущество в очереди микрозадач. Мы можем лишь молить его о милости, поднося ему наши коллбэки и промисы, но его логика остаётся за гранью нашего понимания, и порядок исполнения — его непостижимая, космическая прихоть.",
+        "Иногда, в час отчаяния, мы взываем к Оракулу, именуемому console.log, в надежде, что он прольёт свет на тёмные процессы, происходящие внутри. Но его ответы — лишь неясные тени, искажённые отражения истинной природы объектов. И чем глубже мы погружаемся в трассировку стека, тем яснее понимаем, что ошибка — не в коде, а в самой ткани реальности, которую мы пытались подчинить своей воле."
+    ]
+
+    # Директории для изображений
+    IMAGES_DIR = ".\\content\\js"
+    category = "Мемология_Джаваскриптолюбие"
+
+    # Генерация цены
+    price = 0
+    if is_paid and not is_elite:
+        price = random.randint(50, 100)
+
+    # Выбираем случайный индекс
+    random_idx = random.randint(0, len(full_descriptions) - 1)
+
+    # Случайный выбор описания с добавлением префикса
+    prefix = "Элитное" if is_elite else "Обычное"
+    random_description = f"{prefix} ГДЗ: {random.choice(description_options)}"
+
+    # Формируем full_description из выбранного заголовка
+    random_full_description = f"{prefix} ГДЗ: {full_descriptions[random_idx]}"
+
+    # Берем соответствующую цитату
+    selected_quote = quotes[random_idx]
+
+    # Подготовка данных ГДЗ
+    gdz_data = {
+        "description": random_description,
+        "full_description": random_full_description,
+        "category": category,
+        "content_text": selected_quote,  # Используем соответствующую цитату
+        "price": price,
+        "is_elite": is_elite
+    }
+
+    # Выбор случайного изображения (без изменений)
+    try:
+        images = [f for f in os.listdir(IMAGES_DIR)
+                  if f.lower().endswith(('.png', '.jpg', '.jpeg'))]
+
+        if not images:
+            raise ValueError("Нет изображений в директории")
+
+        random_image = random.choice(images)
+        image_path = os.path.join(IMAGES_DIR, random_image)
+
+    except Exception as e:
+        print(f"Ошибка выбора изображения: {e}")
+        # Создание временного PNG-файла как fallback
+        png_data = b'\x89PNG\r\n\x1a\n\x00\x00\x00\rIHDR\x00\x00\x00\x01\x00\x00\x00\x01\x08\x02\x00\x00\x00\x90wS\xde\x00\x00\x00\x0cIDAT\x08\xd7c\xf8\xff\xff?\x00\x05\xfe\x02\xfe\xdc\xccY\xe7\x00\x00\x00\x00IEND\xaeB`\x82'
+        with open("temp.png", "wb") as f:
+            f.write(png_data)
+        image_path = "temp.png"
+
+    return gdz_data, image_path, category
+
 
 def _register(s, user):
     try:
@@ -334,7 +495,7 @@ def _boost_user_rating(s_owner: FakeSession, user_owner: dict, s_rater: FakeSess
     _log("Накрутка рейтинга для пользователя")
     gdz_ids = []
     for _ in range(5):
-        gdz_data, file, _ = _gen_gdz_random_image_random_answer_frog(is_elite=False, is_paid=True)
+        gdz_data, file, _ = _gen_gdz_js(is_elite=False, is_paid=True)
         gdz = _create_gdz(s_owner, gdz_data, file)
         gdz_id = gdz.get("id")
         if not gdz_id:
@@ -391,8 +552,8 @@ def check(host: str):
     _login(s2, user2["username"], user2["password"])
 
     _log("Создание начальных ГДЗ")
-    gdz_data1, file1, category1 = _gen_gdz_random_image_random_answer_frog(is_elite=False, is_paid=False)
-    gdz_data2, file2, category2 = _gen_gdz_random_image_random_answer_frog(is_elite=False, is_paid=True)
+    gdz_data1, file1, category1 = _gen_gdz_js(is_elite=False, is_paid=False)
+    gdz_data2, file2, category2 = _gen_gdz_js(is_elite=False, is_paid=True)
     gdz1 = _create_gdz(s1, gdz_data1, file1)
     gdz2 = _create_gdz(s2, gdz_data2, file2)
     gdz1_id = gdz1.get("id")
@@ -463,7 +624,7 @@ def check(host: str):
     gdz_ids = []
     ratings = [rating1]
     for _ in range(4):
-        gdz_data, file, _ = _gen_gdz_random_image_random_answer_frog(is_elite=False, is_paid=True)
+        gdz_data, file, _ = _gen_gdz_js(is_elite=False, is_paid=True)
         gdz = _create_gdz(s2_first, gdz_data, file)  # Используем первого пользователя 2
         gdz_id = gdz.get("id")
         if not gdz_id:
@@ -535,7 +696,7 @@ def check(host: str):
     except (FileNotFoundError, json.JSONDecodeError, KeyError):
         _log("Предыдущий элитный пользователь не найден, используем предсозданного 2/2")
         _login(s_elite, "2", "2")
-    gdz_data_elite, file_elite, category_elite = _gen_gdz_random_image_random_answer_frog(is_elite=True, is_paid=False)
+    gdz_data_elite, file_elite, category_elite = _gen_gdz_js(is_elite=True, is_paid=False)
     gdz_elite = _create_gdz(s_elite, gdz_data_elite, file_elite)
     gdz_elite_id = gdz_elite.get("id")
     if not gdz_elite_id:
@@ -562,7 +723,7 @@ def check(host: str):
     user4 = _gen_user()
     _register(s4, user4)
     _login(s4, user4["username"], user4["password"])
-    gdz_data4, file4, _ = _gen_gdz_random_image_random_answer_frog(is_elite=False, is_paid=True)
+    gdz_data4, file4, _ = _gen_gdz_js(is_elite=False, is_paid=True)
     gdz4 = _create_gdz(s4, gdz_data4, file4)
     gdz4_id = gdz4.get("id")
     if not gdz4_id:
@@ -578,7 +739,7 @@ def check(host: str):
         _die(ExitStatus.MUMBLE, f"Рейтинг пользователя 4 {actual_rating_user4} неожиданно достаточен для доступа к элитным ГДЗ")
 
     _log("Проверка, что пользователь 4 с низким рейтингом не может создать элитное ГДЗ")
-    gdz_data_elite_user4, file_elite_user4, _ = _gen_gdz_random_image_random_answer_frog(is_elite=True, is_paid=False)
+    gdz_data_elite_user4, file_elite_user4, _ = _gen_gdz_js(is_elite=True, is_paid=False)
     try:
         r_elite_attempt_user4 = s4.post("/gdz/create", files={
             'content_file': ('solution.png', open(file_elite_user4, "rb"), 'image/png'),
@@ -606,7 +767,7 @@ def put(host: str, flag_id: str, flag: str, vuln: int):
         user = _gen_user()
         _register(s, user)
         _login(s, user["username"], user["password"])
-        gdz_data, file, _ = _gen_gdz_random_image_random_answer_frog(is_elite=False, is_paid=True)
+        gdz_data, file, _ = _gen_gdz_js(is_elite=False, is_paid=True)
         gdz_data["full_description"] = flag
         gdz = _create_gdz(s, gdz_data, file)
         gdz_id = gdz.get("id")
@@ -625,7 +786,7 @@ def put(host: str, flag_id: str, flag: str, vuln: int):
         user = _gen_user()
         _register(s, user)
         _login(s, user["username"], user["password"])
-        gdz_data, _, category = _gen_gdz_random_image_random_answer_frog(is_elite=False, is_paid=True)
+        gdz_data, _, category = _gen_gdz_js(is_elite=False, is_paid=True)
         try:
             category_part, subject_part = category.split("_", 1)
         except ValueError:
@@ -665,7 +826,7 @@ def put(host: str, flag_id: str, flag: str, vuln: int):
         # Накрутка рейтинга
         _boost_user_rating(s, user_elite, s_rater)
         # Создание элитного ГДЗ
-        gdz_data, file, _ = _gen_gdz_random_image_random_answer_frog(is_elite=True, is_paid=False)
+        gdz_data, file, _ = _gen_gdz_js(is_elite=True, is_paid=False)
         gdz_data["content_text"] = flag
         gdz = _create_gdz(s, gdz_data, file)
         gdz_id = gdz.get("id")
