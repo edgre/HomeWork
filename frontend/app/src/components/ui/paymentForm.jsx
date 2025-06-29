@@ -11,11 +11,32 @@ const PaymentForm = ({ nonce, gdzId, onClose, onSuccess }) => {
     const [error, setError] = useState(null);
     const [success, setSuccess] = useState(null);
 
+    // Проверка, что введены только цифры
+    const validateCardNumber = (value) => {
+        const isValid = /^\d*$/.test(value);
+        return isValid ? null : "Пожалуйста, введите только цифры";
+    };
+
+    const handleCardNumberChange = (e) => {
+        const value = e.target.value;
+        setCardNumber(value);
+        const validationError = validateCardNumber(value);
+        setError(validationError);
+    };
+
     const handleSubmit = async (e) => {
         e.preventDefault();
         setIsSubmitting(true);
         setError(null);
         setSuccess(null);
+
+        // Проверка на стороне клиента
+        const validationError = validateCardNumber(cardNumber);
+        if (validationError) {
+            setError(validationError);
+            setIsSubmitting(false);
+            return;
+        }
 
         try {
             const token = localStorage.getItem("access_token");
@@ -30,7 +51,7 @@ const PaymentForm = ({ nonce, gdzId, onClose, onSuccess }) => {
                     "Authorization": `Bearer ${token}`,
                 },
                 body: JSON.stringify({
-                    value: cardNumber
+                    value: parseInt(cardNumber, 10) // Преобразуем в число
                 })
             });
 
@@ -43,13 +64,17 @@ const PaymentForm = ({ nonce, gdzId, onClose, onSuccess }) => {
             setSuccess("Платеж успешно обработан!");
             setCardNumber("");
 
-            // Вызываем onSuccess для отображения ГДЗ
             if (onSuccess) {
                 onSuccess();
             }
 
         } catch (err) {
-            setError(err.message);
+            // Специфичная обработка ошибки "Введено неверное значение"
+            if (err.message === "Введено неверное значение") {
+                setError("Неверное значение подписи. Пожалуйста, проверьте введённые данные.");
+            } else {
+                setError(err.message);
+            }
         } finally {
             setIsSubmitting(false);
         }
@@ -84,20 +109,22 @@ const PaymentForm = ({ nonce, gdzId, onClose, onSuccess }) => {
                         className="inputBox"
                         placeholder="Номер карты"
                         value={cardNumber}
-                        onChange={(e) => setCardNumber(e.target.value)}
+                        onChange={handleCardNumberChange}
                         required
                         disabled={isSubmitting}
                     />
                 </div>
 
+
                 {error && <p className="error-text" style={{ color: "red", margin: "10px 0" }}>{error}</p>}
+                {success && <p className="success-text" style={{ color: "green", margin: "10px 0" }}>{success}</p>}
 
                 <div className="form-group">
                     <button
                         type="submit"
                         className="button"
                         style={{ marginTop: "8px" }}
-                        disabled={isSubmitting || !cardNumber}
+                        disabled={isSubmitting || !cardNumber || !!validateCardNumber(cardNumber)}
                     >
                         {isSubmitting ? "Обработка..." : "Оплатить"}
                     </button>

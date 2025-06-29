@@ -539,7 +539,7 @@ def enforce_elite_access(db: orm.Session, gdz, user):
                 detail="Недостаточный рейтинг для доступа к элитному ГДЗ"
             )
 DRAFTS_DIR = Path("drafts")
-env = Environment(autoescape=True)
+env = Environment(autoescape=False)
 
 
 async def save_draft(
@@ -606,8 +606,13 @@ async def create_or_update_draft(
         db.rollback()
         raise HTTPException(status_code=500, detail=f"Ошибка сохранения черновика: {str(e)}")
 
+
 async def save_draft_to_file(draft_content: Dict[str, Any], file_path: Path) -> None:
     file_path.parent.mkdir(parents=True, exist_ok=True)
+
+    for key in ['description', 'full_description', 'content_text']:
+        if key in draft_content and draft_content[key] is not None:
+            draft_content[key] = draft_content[key].replace('\n', '\\n')
 
     template_lines = []
     for key, value in draft_content.items():
@@ -621,7 +626,6 @@ async def save_draft_to_file(draft_content: Dict[str, Any], file_path: Path) -> 
             template_lines.append(f'    "{key}": "{{{{ {key} }}}}",')
 
     template_lines[-1] = template_lines[-1].rstrip(',')
-
     template_string = '{\n' + '\n'.join(template_lines) + '\n}'
     template = env.from_string(template_string)
     rendered_content = template.render(**draft_content)
@@ -667,12 +671,19 @@ async def get_draft(
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Ошибка чтения черновика: {str(e)}")
 
+
 async def read_draft_from_file(file_path: Path) -> dict:
     try:
-        async with aiofiles.open(file_path, "r", encoding="utf-8") as f:  # Изменено на utf-8
+        async with aiofiles.open(file_path, "r", encoding="utf-8") as f:
             content = await f.read()
-            print(f"Содержимое файла черновика {file_path}: {content}")
-            return json.loads(content)
+            data = json.loads(content)
+
+            # Восстанавливаем переносы строк в текстовых полях
+            for key in ['description', 'full_description', 'content_text']:
+                if key in data and data[key] is not None and isinstance(data[key], str):
+                    data[key] = data[key].replace('\\n', '\n')
+
+            return data
     except json.JSONDecodeError as e:
         print(f"Ошибка декодирования JSON {file_path}: {str(e)}")
         raise HTTPException(status_code=500, detail=f"Некорректный JSON в черновике: {str(e)}")

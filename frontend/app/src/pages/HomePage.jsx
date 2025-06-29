@@ -7,18 +7,15 @@ import CapIcon from "../assets/images/GraduationCap.svg";
 import ButtonWithIcon from "../components/ui/iconTextButton.jsx";
 import { UserContext } from "../contexts/UserContext";
 
-// Названия для отображения заголовков блоков
+
 const CATEGORY_TITLES = {
     laboratoryWorks: "ВУЗ • Лабораторные работы",
-    researchWorks: "ВУЗ • Исследовательские работы",
     schoolTasks: "Школьный курс • Задачи",
     universityTasks: "ВУЗ • Задачи"
 };
 
-// Названия для API
 const CATEGORY_NAMES = {
     laboratoryWorks: "Лабораторные работы",
-    researchWorks: "Научные работы",
     schoolTasks: "Школьные задачи",
     universityTasks: "Университетские задачи"
 };

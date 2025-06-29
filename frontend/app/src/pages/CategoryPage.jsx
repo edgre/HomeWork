@@ -6,7 +6,7 @@ import HomeWorkPanel from "../components/ui/hwPanel";
 import "../assets/styles/grid.css";
 
 const CategoryPage = () => {
-  const { slug } = useParams(); // Например: "программирование лабораторные" или "lab-programming"
+  const { slug } = useParams();
   const navigate = useNavigate();
   const [tasks, setTasks] = useState([]);
   const [isLoading, setIsLoading] = useState(true);

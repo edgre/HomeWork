@@ -8,6 +8,7 @@ import random
 import string
 import sys
 import time
+import random
 import pickle
 from enum import Enum
 from sys import argv
@@ -15,6 +16,8 @@ import requests
 import json
 from cryptohash import sha1
 from datetime import datetime
+from dynamic_generation import dynamic_generate
+from static_generation import static_generate
 
 # Make all random more random.
 random = random.SystemRandom()
@@ -80,42 +83,59 @@ def _gen_user():
 
 CATEGORIES = [
     "Университетские задачи_Мат.анализ",
-    "Лабораторные работы_Программирование",
-    "Лабораторные работы_Модели безопасности",
-    "Лабораторные работы_Сети",
-    "Лабораторные работы_ТЧМК",
-    "Лабораторные работы_Языки программирования",
-    "Школьные задачи_Алгебра",
-    "Школьные задачи_Геометрия",
-    "Школьные задачи_Физика",
-    "Университетские задачи_Философия",
-    "Университетские задачи_Экономика",
-    "Университетские задачи_КМЗИ",
-    "Университетские задачи_Мат.статистика",
-    "Университетские задачи_Теория вероятностей",
-    "Университетские задачи_Алгебра",
-    "Университетские задачи_Программирование",
-    "Научные работы_Курсовая работа",
-    "Научные работы_Диплом"
+     "Лабораторные работы_Модели безопасности",
+     "Лабораторные работы_Компьютерные сети",
+     "Лабораторные работы_ТЧМК",
+     "Лабораторные работы_АИСД",
+     "Школьные задачи_Алгебра",
+     "Школьные задачи_Геометрия",
+     "Школьные задачи_Физика",
+     "Школьные задачи_Информатика",
+     "Университетские задачи_Экономика",
+     "Университетские задачи_КМЗИ",
+     "Университетские задачи_Мат.статистика",
+     "Университетские задачи_Теория вероятностей",
+     "Университетские задачи_Алгебра",
+
 ]
 
 def _gen_gdz(is_elite=False, is_paid=False):
     category = random.choice(CATEGORIES)
     price = 0
-    if is_paid and not is_elite: 
+    if is_paid and not is_elite:
         price = random.randint(50, 100)
-    gdz_data = {
-        "description": f"{'Элитное' if is_elite else 'Обычное'} ГДЗ в {category}",
-        "full_description": f"Полное описание для {'элитного' if is_elite else 'обычного'} ГДЗ в {category}",
-        "category": category,
-        "content_text": "Элитный ответ: 42" if is_elite else "Ответ: 42",
-        "price": price,
-        "is_elite": is_elite
-    }
-    png_data = b'\x89PNG\r\n\x1a\n\x00\x00\x00\rIHDR\x00\x00\x00\x01\x00\x00\x00\x01\x08\x02\x00\x00\x00\x90wS\xde\x00\x00\x00\x0cIDAT\x08\xd7c\xf8\xff\xff?\x00\x05\xfe\x02\xfe\xdc\xccY\xe7\x00\x00\x00\x00IEND\xaeB`\x82'
-    with open("temp.png", "wb") as f:
-        f.write(png_data)
-    return gdz_data, "temp.png", category
+    
+    # Случайный выбор метода генерации (50/50)
+    use_static = random.choice([True, False])
+    
+    if use_static:
+        print("Using static generation")
+        gdz = static_generate(category)
+        file_path = gdz["content"]  # Путь к файлу из static_generate
+        gdz_data = {
+            "description": gdz["description"],
+            "full_description": gdz["full_description"],
+            "category": category,
+            "content_text": gdz["content_text"],
+            "content": file_path,  # Путь к файлу для сервера
+            "price": price,
+            "is_elite": is_elite
+        }
+        return gdz_data, file_path, category
+    else:
+        print("Using dynamic generation")
+        gdz = dynamic_generate(category)
+        # Для динамической генерации content_text используется как content
+        gdz_data = {
+            "description": gdz["description"],
+            "full_description": gdz["full_description"],
+            "category": category,
+            "content_text": gdz["content_text"],
+            "content": gdz["content_text"],  # Текст ответа для сервера
+            "price": price,
+            "is_elite": is_elite
+        }
+        return gdz_data, None, category  # Нет файла
 
 def _register(s, user):
     try:
@@ -140,14 +160,22 @@ def _login(s, username, password):
     s.headers.update({"Authorization": f"Bearer {token}"})
     return token
 
+
 def _create_gdz(s, gdz_data, file_path):
     try:
-        with open(file_path, "rb") as f:
-            files = {
-                'content_file': ('solution.png', f, 'image/png'),
-                'gdz_str': (None, json.dumps(gdz_data))
-            }
-            r = s.post("/gdz/create", files=files)
+        files = {
+            'gdz_str': (None, json.dumps(gdz_data))
+        }
+
+        if file_path is not None:
+            try:
+                with open(file_path, "rb") as f:
+                    file_content = f.read()  # Читаем содержимое файла в память
+                files['content_file'] = ('solution.png', file_content, 'image/png')
+            except FileNotFoundError as e:
+                _die(ExitStatus.MUMBLE, f"Файл не найден: {file_path}")
+
+        r = s.post("/gdz/create", files=files)
     except Exception as e:
         _die(ExitStatus.DOWN, f"Failed to create GDZ: {e}")
     if r.status_code != 200:
@@ -386,7 +414,8 @@ def check(host: str):
     ratings = [rating1]
     for _ in range(4):
         gdz_data, file, _ = _gen_gdz(is_elite=False, is_paid=True)
-        gdz = _create_gdz(s2_first, gdz_data, file)  # Используем первого пользователя 2
+        gdz = _create_gdz(s2_first, gdz_data, file)
+        _log(f"Ответ сервера: {gdz}")
         gdz_id = gdz.get("id")
         if not gdz_id:
             _die(ExitStatus.MUMBLE, "Не удалось получить ID ГДЗ")
@@ -502,10 +531,16 @@ def check(host: str):
     _log("Проверка, что пользователь 4 с низким рейтингом не может создать элитное ГДЗ")
     gdz_data_elite_user4, file_elite_user4, _ = _gen_gdz(is_elite=True, is_paid=False)
     try:
-        r_elite_attempt_user4 = s4.post("/gdz/create", files={
-            'content_file': ('solution.png', open(file_elite_user4, "rb"), 'image/png'),
-            'gdz_str': (None, json.dumps(gdz_data_elite_user4))
-        })
+        if file_elite_user4:
+            r_elite_attempt_user4 = s4.post("/gdz/create", files={
+                'content_file': ('solution.png', open(file_elite_user4, "rb"), 'image/png'),
+                'gdz_str': (None, json.dumps(gdz_data_elite_user4))
+            })
+        else:
+            r_elite_attempt_user4 = s4.post("/gdz/create", files={
+                'gdz_str': (None, json.dumps(gdz_data_elite_user4))
+            })
+
         if r_elite_attempt_user4.status_code != 403:
             _die(ExitStatus.MUMBLE, f"Ожидался код 403 для создания элитного ГДЗ пользователем 4, получен {r_elite_attempt_user4.status_code}")
         if "Недостаточный рейтинг для создания элитного ГДЗ" not in r_elite_attempt_user4.text:
