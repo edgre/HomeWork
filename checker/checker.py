@@ -120,26 +120,37 @@ def _gen_gdz(is_elite=False, is_paid=False):
     return gdz_data, "temp.png", category
 
 
-def _gen_gdz1(is_elite=False, is_paid=False):
-    # лягушачья пропаганда, лягушачьи теории заговора, болотная вечеринка, Жабья инициация, Сеанс "Жабьей Правды", Болотные Посиделки, Лягушачьего Абсурда
+def _gen_gdz_random_image_random_answer_frog(is_elite=False, is_paid=False):
+    # Списки для случайного выбора
+    description_options = [
+        "лягушачья пропаганда",
+        "лягушачьи теории заговора",
+        "болотная вечеринка",
+        "Жабья инициация",
+        "Сеанс \"Жабьей Правды\"",
+        "Болотные Посиделки",
+        "театр Лягушачьего Абсурда"
+    ]
+
+    full_description_options = [
+        "покекать",
+        "почебурекать",
+        "стань лягушкой",
+        "погрузись в мир лягушек",
+        "олягушся"
+    ]
+
     # Директории для изображений и цитат
-    # IMAGES_DIR = "..\\backend\\media\\content\\french_language\\images"
     IMAGES_DIR = ".\\content\\french_language\\images"
-
-    # QUOTES_FILE = r"C:\Users\admin\PycharmProjects\HomeWork9\backend\media\content\french_language\frogs.txt"
     QUOTES_FILE = ".\\content\\french_language\\frogs.txt"
-
-    # Выбор категории
     category = "Мемология_Уроки Французского"
-
-
 
     # Генерация цены
     price = 0
     if is_paid and not is_elite:
         price = random.randint(50, 100)
 
-    # Загрузка случайной цитаты из файла
+    # Загрузка случайной цитаты
     try:
         with open(QUOTES_FILE, "r", encoding="utf-8") as f:
             quotes = [line.strip() for line in f.readlines() if line.strip()]
@@ -148,10 +159,15 @@ def _gen_gdz1(is_elite=False, is_paid=False):
         print(f"Ошибка загрузки цитат: {e}")
         random_quote = "Ответ: 42"
 
+    # Случайный выбор описаний с добавлением префикса
+    prefix = "Элитное" if is_elite else "Обычное"
+    random_description = f"{prefix} ГДЗ: {random.choice(description_options)}"
+    random_full_description = f"{prefix} ГДЗ: {random.choice(full_description_options)}"
+
     # Подготовка данных ГДЗ
     gdz_data = {
-        "description": f"{'Элитное' if is_elite else 'Обычное'} ГДЗ 228 в {category}",
-        "full_description": f"Полное описание для {'элитного' if is_elite else 'обычного'} ГДЗ в {category}",
+        "description": random_description,
+        "full_description": random_full_description,
         "category": category,
         "content_text": random_quote,
         "price": price,
@@ -318,7 +334,7 @@ def _boost_user_rating(s_owner: FakeSession, user_owner: dict, s_rater: FakeSess
     _log("Накрутка рейтинга для пользователя")
     gdz_ids = []
     for _ in range(5):
-        gdz_data, file, _ = _gen_gdz1(is_elite=False, is_paid=True)
+        gdz_data, file, _ = _gen_gdz_random_image_random_answer_frog(is_elite=False, is_paid=True)
         gdz = _create_gdz(s_owner, gdz_data, file)
         gdz_id = gdz.get("id")
         if not gdz_id:
@@ -375,8 +391,8 @@ def check(host: str):
     _login(s2, user2["username"], user2["password"])
 
     _log("Создание начальных ГДЗ")
-    gdz_data1, file1, category1 = _gen_gdz1(is_elite=False, is_paid=False)
-    gdz_data2, file2, category2 = _gen_gdz1(is_elite=False, is_paid=True)
+    gdz_data1, file1, category1 = _gen_gdz_random_image_random_answer_frog(is_elite=False, is_paid=False)
+    gdz_data2, file2, category2 = _gen_gdz_random_image_random_answer_frog(is_elite=False, is_paid=True)
     gdz1 = _create_gdz(s1, gdz_data1, file1)
     gdz2 = _create_gdz(s2, gdz_data2, file2)
     gdz1_id = gdz1.get("id")
@@ -447,7 +463,7 @@ def check(host: str):
     gdz_ids = []
     ratings = [rating1]
     for _ in range(4):
-        gdz_data, file, _ = _gen_gdz1(is_elite=False, is_paid=True)
+        gdz_data, file, _ = _gen_gdz_random_image_random_answer_frog(is_elite=False, is_paid=True)
         gdz = _create_gdz(s2_first, gdz_data, file)  # Используем первого пользователя 2
         gdz_id = gdz.get("id")
         if not gdz_id:
@@ -519,7 +535,7 @@ def check(host: str):
     except (FileNotFoundError, json.JSONDecodeError, KeyError):
         _log("Предыдущий элитный пользователь не найден, используем предсозданного 2/2")
         _login(s_elite, "2", "2")
-    gdz_data_elite, file_elite, category_elite = _gen_gdz1(is_elite=True, is_paid=False)
+    gdz_data_elite, file_elite, category_elite = _gen_gdz_random_image_random_answer_frog(is_elite=True, is_paid=False)
     gdz_elite = _create_gdz(s_elite, gdz_data_elite, file_elite)
     gdz_elite_id = gdz_elite.get("id")
     if not gdz_elite_id:
@@ -546,7 +562,7 @@ def check(host: str):
     user4 = _gen_user()
     _register(s4, user4)
     _login(s4, user4["username"], user4["password"])
-    gdz_data4, file4, _ = _gen_gdz1(is_elite=False, is_paid=True)
+    gdz_data4, file4, _ = _gen_gdz_random_image_random_answer_frog(is_elite=False, is_paid=True)
     gdz4 = _create_gdz(s4, gdz_data4, file4)
     gdz4_id = gdz4.get("id")
     if not gdz4_id:
@@ -562,7 +578,7 @@ def check(host: str):
         _die(ExitStatus.MUMBLE, f"Рейтинг пользователя 4 {actual_rating_user4} неожиданно достаточен для доступа к элитным ГДЗ")
 
     _log("Проверка, что пользователь 4 с низким рейтингом не может создать элитное ГДЗ")
-    gdz_data_elite_user4, file_elite_user4, _ = _gen_gdz1(is_elite=True, is_paid=False)
+    gdz_data_elite_user4, file_elite_user4, _ = _gen_gdz_random_image_random_answer_frog(is_elite=True, is_paid=False)
     try:
         r_elite_attempt_user4 = s4.post("/gdz/create", files={
             'content_file': ('solution.png', open(file_elite_user4, "rb"), 'image/png'),
@@ -590,7 +606,7 @@ def put(host: str, flag_id: str, flag: str, vuln: int):
         user = _gen_user()
         _register(s, user)
         _login(s, user["username"], user["password"])
-        gdz_data, file, _ = _gen_gdz1(is_elite=False, is_paid=True)
+        gdz_data, file, _ = _gen_gdz_random_image_random_answer_frog(is_elite=False, is_paid=True)
         gdz_data["full_description"] = flag
         gdz = _create_gdz(s, gdz_data, file)
         gdz_id = gdz.get("id")
@@ -609,7 +625,7 @@ def put(host: str, flag_id: str, flag: str, vuln: int):
         user = _gen_user()
         _register(s, user)
         _login(s, user["username"], user["password"])
-        gdz_data, _, category = _gen_gdz1(is_elite=False, is_paid=True)
+        gdz_data, _, category = _gen_gdz_random_image_random_answer_frog(is_elite=False, is_paid=True)
         try:
             category_part, subject_part = category.split("_", 1)
         except ValueError:
@@ -649,7 +665,7 @@ def put(host: str, flag_id: str, flag: str, vuln: int):
         # Накрутка рейтинга
         _boost_user_rating(s, user_elite, s_rater)
         # Создание элитного ГДЗ
-        gdz_data, file, _ = _gen_gdz1(is_elite=True, is_paid=False)
+        gdz_data, file, _ = _gen_gdz_random_image_random_answer_frog(is_elite=True, is_paid=False)
         gdz_data["content_text"] = flag
         gdz = _create_gdz(s, gdz_data, file)
         gdz_id = gdz.get("id")
