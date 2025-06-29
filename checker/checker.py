@@ -99,7 +99,8 @@ CATEGORIES = [
     "Научные работы_Диплом",
     "Мемология_Уроки Французского",
     "Мемология_Инглиш мафака",
-    "Мемология_Джаваскриптолюбие"
+    "Мемология_Джаваскриптолюбие",
+    "Мемология_Царица наук"
 ]
 
 def _gen_gdz(is_elite=False, is_paid=False):
@@ -356,6 +357,104 @@ def _gen_gdz_js(is_elite=False, is_paid=False):
     return gdz_data, image_path, category
 
 
+def _gen_gdz_static_memes(is_elite=False, is_paid=False):
+    # Списки для случайного выбора
+    description_options = [
+        "Форенайте или бабадже",
+        "на пенёк сел - косарь отдал",
+        "я устал, я мухожук",
+        "Где деньги, Лебовски?",
+        "Бритва Оккама порезала логичность",
+        "Это не баг, это фича",
+        "rm -rf / и никаких проблем",
+        "В проде всё норм... вроде",
+        "Bruh...",
+        "Когда съел яблоко и вырос до Production",
+        "Это фиаско, братан"
+    ]
+
+    full_description_options = [
+        "покекать",
+        "почебурекать",
+        "по хиханьки хаханьки",
+        "познать этот мир чтобы он на тысячах и тысячах планет...",
+        "а, шо, опять?"
+    ]
+
+    # Цитаты для content_text и имена файлов
+    quotes = [
+        "AWS делает расчет за использользование сервера",
+        "Безвыходная ситуация",
+        "В Google Translator появятся зумерский и кальянный языки",
+        "Когда не читал документацию к библиотеке и налепил код из примеров на гитхабе",
+        "Минфин представил новую формулу расчета налогов в России",
+        "Плачь, Tesla! Власти анонсировали российско-белорусский электромобиль",
+        "Сова Duolingo дала лучшую мотивацию для изучения английского языка",
+        "Учителям английского языка запретят использовать глагол Put out",
+        "это даже не сгенерировано, патент реальный, вот и думайте"
+    ]
+
+    # Директории для изображений
+    IMAGES_DIR = ".\\content\\memeStatic"
+    category = "Мемология_Царица наук"
+
+    # Генерация цены
+    price = 0
+    if is_paid and not is_elite:
+        price = random.randint(50, 100)
+
+    # Выбираем случайную цитату
+    selected_quote = random.choice(quotes)
+
+    # Формируем имя файла на основе цитаты
+    image_filename = f"{selected_quote}.jpg"
+    image_path = os.path.join(IMAGES_DIR, image_filename)
+
+    # Случайный выбор описания с добавлением префикса
+    prefix = "Элитное" if is_elite else "Обычное"
+    random_description = f"{prefix} ГДЗ: {random.choice(description_options)}"
+
+    # Формируем full_description
+    # random_full_description = f"{prefix} ГДЗ: {selected_quote}"
+    random_full_description = f"{prefix} ГДЗ: {random.choice(full_description_options)}"
+
+    # Подготовка данных ГДЗ
+    gdz_data = {
+        "description": random_description,
+        "full_description": random_full_description,
+        "category": category,
+        "content_text": selected_quote,
+        "price": price,
+        "is_elite": is_elite
+    }
+
+    # Проверка существования файла
+    if not os.path.exists(image_path):
+        print(f"Файл изображения не найден: {image_path}")
+        # Если файл не найден, создаем временное изображение
+        try:
+            png_data = b'\x89PNG\r\n\x1a\n\x00\x00\x00\rIHDR\x00\x00\x00\x01\x00\x00\x00\x01\x08\x02\x00\x00\x00\x90wS\xde\x00\x00\x00\x0cIDAT\x08\xd7c\xf8\xff\xff?\x00\x05\xfe\x02\xfe\xdc\xccY\xe7\x00\x00\x00\x00IEND\xaeB`\x82'
+            with open("temp.png", "wb") as f:
+                f.write(png_data)
+            image_path = "temp.png"
+        except Exception as e:
+            print(f"Ошибка создания временного изображения: {e}")
+            # В крайнем случае используем случайное изображение из папки
+            try:
+                images = [f for f in os.listdir(IMAGES_DIR)
+                          if f.lower().endswith(('.png', '.jpg', '.jpeg'))]
+                if images:
+                    random_image = random.choice(images)
+                    image_path = os.path.join(IMAGES_DIR, random_image)
+                else:
+                    raise ValueError("Нет изображений в директории")
+            except Exception as e:
+                print(f"Ошибка выбора случайного изображения: {e}")
+                image_path = ""
+
+    return gdz_data, image_path, category
+
+
 def _register(s, user):
     try:
         r = s.post("/register", json=user)
@@ -495,7 +594,7 @@ def _boost_user_rating(s_owner: FakeSession, user_owner: dict, s_rater: FakeSess
     _log("Накрутка рейтинга для пользователя")
     gdz_ids = []
     for _ in range(5):
-        gdz_data, file, _ = _gen_gdz_js(is_elite=False, is_paid=True)
+        gdz_data, file, _ = _gen_gdz_static_memes(is_elite=False, is_paid=True)
         gdz = _create_gdz(s_owner, gdz_data, file)
         gdz_id = gdz.get("id")
         if not gdz_id:
@@ -552,8 +651,8 @@ def check(host: str):
     _login(s2, user2["username"], user2["password"])
 
     _log("Создание начальных ГДЗ")
-    gdz_data1, file1, category1 = _gen_gdz_js(is_elite=False, is_paid=False)
-    gdz_data2, file2, category2 = _gen_gdz_js(is_elite=False, is_paid=True)
+    gdz_data1, file1, category1 = _gen_gdz_static_memes(is_elite=False, is_paid=False)
+    gdz_data2, file2, category2 = _gen_gdz_static_memes(is_elite=False, is_paid=True)
     gdz1 = _create_gdz(s1, gdz_data1, file1)
     gdz2 = _create_gdz(s2, gdz_data2, file2)
     gdz1_id = gdz1.get("id")
@@ -624,7 +723,7 @@ def check(host: str):
     gdz_ids = []
     ratings = [rating1]
     for _ in range(4):
-        gdz_data, file, _ = _gen_gdz_js(is_elite=False, is_paid=True)
+        gdz_data, file, _ = _gen_gdz_static_memes(is_elite=False, is_paid=True)
         gdz = _create_gdz(s2_first, gdz_data, file)  # Используем первого пользователя 2
         gdz_id = gdz.get("id")
         if not gdz_id:
@@ -696,7 +795,7 @@ def check(host: str):
     except (FileNotFoundError, json.JSONDecodeError, KeyError):
         _log("Предыдущий элитный пользователь не найден, используем предсозданного 2/2")
         _login(s_elite, "2", "2")
-    gdz_data_elite, file_elite, category_elite = _gen_gdz_js(is_elite=True, is_paid=False)
+    gdz_data_elite, file_elite, category_elite = _gen_gdz_static_memes(is_elite=True, is_paid=False)
     gdz_elite = _create_gdz(s_elite, gdz_data_elite, file_elite)
     gdz_elite_id = gdz_elite.get("id")
     if not gdz_elite_id:
@@ -723,7 +822,7 @@ def check(host: str):
     user4 = _gen_user()
     _register(s4, user4)
     _login(s4, user4["username"], user4["password"])
-    gdz_data4, file4, _ = _gen_gdz_js(is_elite=False, is_paid=True)
+    gdz_data4, file4, _ = _gen_gdz_static_memes(is_elite=False, is_paid=True)
     gdz4 = _create_gdz(s4, gdz_data4, file4)
     gdz4_id = gdz4.get("id")
     if not gdz4_id:
@@ -739,7 +838,7 @@ def check(host: str):
         _die(ExitStatus.MUMBLE, f"Рейтинг пользователя 4 {actual_rating_user4} неожиданно достаточен для доступа к элитным ГДЗ")
 
     _log("Проверка, что пользователь 4 с низким рейтингом не может создать элитное ГДЗ")
-    gdz_data_elite_user4, file_elite_user4, _ = _gen_gdz_js(is_elite=True, is_paid=False)
+    gdz_data_elite_user4, file_elite_user4, _ = _gen_gdz_static_memes(is_elite=True, is_paid=False)
     try:
         r_elite_attempt_user4 = s4.post("/gdz/create", files={
             'content_file': ('solution.png', open(file_elite_user4, "rb"), 'image/png'),
@@ -767,7 +866,7 @@ def put(host: str, flag_id: str, flag: str, vuln: int):
         user = _gen_user()
         _register(s, user)
         _login(s, user["username"], user["password"])
-        gdz_data, file, _ = _gen_gdz_js(is_elite=False, is_paid=True)
+        gdz_data, file, _ = _gen_gdz_static_memes(is_elite=False, is_paid=True)
         gdz_data["full_description"] = flag
         gdz = _create_gdz(s, gdz_data, file)
         gdz_id = gdz.get("id")
@@ -786,7 +885,7 @@ def put(host: str, flag_id: str, flag: str, vuln: int):
         user = _gen_user()
         _register(s, user)
         _login(s, user["username"], user["password"])
-        gdz_data, _, category = _gen_gdz_js(is_elite=False, is_paid=True)
+        gdz_data, _, category = _gen_gdz_static_memes(is_elite=False, is_paid=True)
         try:
             category_part, subject_part = category.split("_", 1)
         except ValueError:
@@ -826,7 +925,7 @@ def put(host: str, flag_id: str, flag: str, vuln: int):
         # Накрутка рейтинга
         _boost_user_rating(s, user_elite, s_rater)
         # Создание элитного ГДЗ
-        gdz_data, file, _ = _gen_gdz_js(is_elite=True, is_paid=False)
+        gdz_data, file, _ = _gen_gdz_static_memes(is_elite=True, is_paid=False)
         gdz_data["content_text"] = flag
         gdz = _create_gdz(s, gdz_data, file)
         gdz_id = gdz.get("id")
