@@ -11,13 +11,15 @@ import { UserContext } from "../contexts/UserContext";
 const CATEGORY_TITLES = {
     laboratoryWorks: "ВУЗ • Лабораторные работы",
     schoolTasks: "Школьный курс • Задачи",
-    universityTasks: "ВУЗ • Задачи"
+    universityTasks: "ВУЗ • Задачи",
+    memology: "Мемология"
 };
 
 const CATEGORY_NAMES = {
     laboratoryWorks: "Лабораторные работы",
     schoolTasks: "Школьные задачи",
-    universityTasks: "Университетские задачи"
+    universityTasks: "Университетские задачи",
+    memology: "Мемология"
 };
 
 const HomePage = () => {
@@ -25,18 +27,20 @@ const HomePage = () => {
     const { user } = useContext(UserContext);
     const [categories, setCategories] = useState({
         laboratoryWorks: [],
-        researchWorks: [],
         schoolTasks: [],
-        universityTasks: []
+        universityTasks: [],
+        memology: []
+
     });
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
 
     const refs = {
         laboratoryWorks: useRef(null),
-        researchWorks: useRef(null),
         schoolTasks: useRef(null),
-        universityTasks: useRef(null)
+        universityTasks: useRef(null),
+        memology: useRef(null)
+
     };
 
     const fetchSubjects = async (category) => {
@@ -55,18 +59,20 @@ const HomePage = () => {
         const loadAllCategories = async () => {
             try {
                 setLoading(true);
-                const [labData, researchData, schoolData, universityData] = await Promise.all([
+                const [labData, schoolData, universityData, memData] = await Promise.all([
                     fetchSubjects(CATEGORY_NAMES.laboratoryWorks),
-                    fetchSubjects(CATEGORY_NAMES.researchWorks),
                     fetchSubjects(CATEGORY_NAMES.schoolTasks),
-                    fetchSubjects(CATEGORY_NAMES.universityTasks)
+                    fetchSubjects(CATEGORY_NAMES.universityTasks),
+                    fetchSubjects(CATEGORY_NAMES.memology)
+
+
                 ]);
 
                 setCategories({
                     laboratoryWorks: labData,
-                    researchWorks: researchData,
                     schoolTasks: schoolData,
-                    universityTasks: universityData
+                    universityTasks: universityData,
+                    memology: memData
                 });
             } catch (err) {
                 setError(err.message);
