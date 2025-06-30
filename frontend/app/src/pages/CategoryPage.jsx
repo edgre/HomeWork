@@ -11,16 +11,14 @@ const CategoryPage = () => {
   const [tasks, setTasks] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [currentPage, setCurrentPage] = useState(1);
+  const pageSize = 10;
 
   const parseSlug = (slug) => {
     const [firstPart, ...restParts] = slug.split("_");
     const title = firstPart;
     const category = restParts.join(" ");
-
-    return {
-      title: title,
-      category: category,
-    };
+    return { title, category };
   };
 
   const { title, category } = parseSlug(slug);
@@ -30,7 +28,8 @@ const CategoryPage = () => {
       try {
         setIsLoading(true);
         const token = localStorage.getItem("access_token");
-        const headers = { Authorization: `Bearer ${token}`};
+        console.log("Токен:", token);
+        const headers = { Authorization: `Bearer ${token}` };
 
         const response = await fetch(`/api/gdz_category/${encodeURIComponent(slug)}`, {
           headers,
@@ -39,7 +38,6 @@ const CategoryPage = () => {
         if (!response.ok) {
           if (response.status === 401) {
             setError("Пожалуйста, войдите в систему");
-            // Опционально: navigate("/login");
             return;
           }
           throw new Error(`Ошибка загрузки: ${response.statusText}`);
@@ -47,9 +45,11 @@ const CategoryPage = () => {
 
         const data = await response.json();
         console.log("Данные задач из API:", data);
+        console.log("Количество задач:", data.length);
         setTasks(data || []);
       } catch (err) {
         setError(err.message);
+        console.error("Ошибка:", err);
       } finally {
         setIsLoading(false);
       }
@@ -57,11 +57,35 @@ const CategoryPage = () => {
     loadTasks();
   }, [slug, navigate]);
 
+  const totalPages = Math.ceil(tasks.length / pageSize);
+  console.log("tasks.length:", tasks.length, "pageSize:", pageSize, "totalPages:", totalPages);
+  const startIndex = (currentPage - 1) * pageSize;
+  const endIndex = startIndex + pageSize;
+  const paginatedTasks = tasks.slice(startIndex, endIndex);
+
+  const goToNextPage = () => {
+    if (currentPage < totalPages) {
+      setCurrentPage(currentPage + 1);
+    }
+  };
+
+  const goToPrevPage = () => {
+    if (currentPage > 1) {
+      setCurrentPage(currentPage - 1);
+    }
+  };
+
+  const goToPage = (page) => {
+    if (page >= 1 && page <= totalPages) {
+      setCurrentPage(page);
+    }
+  };
+
   if (isLoading) return <div className="loading-spinner">Загрузка...</div>;
   if (error) return <div className="error-message">{error}</div>;
 
   return (
-    <div className="category-page">
+    <div className="category-page page-container">
       <header>
         <HeaderTop />
         <HeaderButtom2 />
@@ -73,8 +97,8 @@ const CategoryPage = () => {
           <h2 className="category-type-badge">{category}</h2>
         </div>
 
-        {tasks.length > 0 ? (
-          tasks.map((task) => (
+        {paginatedTasks.length > 0 ? (
+          paginatedTasks.map((task) => (
             <HomeWorkPanel
               key={task.id}
               ownerId={task.owner_id}
@@ -86,6 +110,40 @@ const CategoryPage = () => {
           ))
         ) : (
           <p>Заданий пока нет</p>
+        )}
+
+        {tasks.length > pageSize && (
+          <div className="pagination">
+            <button
+              onClick={goToPrevPage}
+              disabled={currentPage === 1}
+              className="pagination-button"
+              aria-label="Предыдущая страница"
+            >
+              Назад
+            </button>
+            <div className="pagination-pages">
+              {Array.from({ length: totalPages }, (_, i) => i + 1).map((page) => (
+                <button
+                  key={page}
+                  onClick={() => goToPage(page)}
+                  className={`pagination-button pagination-page ${currentPage === page ? "active" : ""}`}
+                  aria-label={`Перейти на страницу ${page}`}
+                  aria-current={currentPage === page ? "page" : undefined}
+                >
+                  {page}
+                </button>
+              ))}
+            </div>
+            <button
+              onClick={goToNextPage}
+              disabled={currentPage === totalPages}
+              className="pagination-button"
+              aria-label="Следующая страница"
+            >
+              Вперед
+            </button>
+          </div>
         )}
       </div>
     </div>

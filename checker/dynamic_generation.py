@@ -2,6 +2,7 @@ import random
 import math
 from math import pi, sqrt, factorial, gcd, log2
 from sympy import symbols, diff, integrate, sin, cos, tan, isprime, mod_inverse
+import os
 
 
 # Базы данных для генерации учебников
@@ -181,7 +182,7 @@ def generate_school_algebra_task():
             else:
                 answer = f"D = {D}. Решение: {'все x' if a > 0 else 'нет решений'}"
 
-    return book, exercise, answer
+    return book, exercise, answer, None
 
 def generate_school_geometry_task():
     GRADES = {
@@ -251,7 +252,7 @@ def generate_school_geometry_task():
             rad = math.radians(angle)
             answer = f"S = ½ab·sinα = ½*{a}*{b}*sin{angle}° ≈ {0.5 * a * b * math.sin(rad):.2f}"
 
-    return book, exercise, answer
+    return book, exercise, answer, None
 
 def generate_school_informatics_task():
     GRADES = {
@@ -318,7 +319,7 @@ def generate_school_informatics_task():
             exercise = f"Оцените сложность алгоритма сортировки пузырьком для массива из {n} элементов"
             answer = f"O(n²) = O({n ** 2}) операций в худшем случае"
 
-    return book, exercise, answer
+    return book, exercise, answer, None
 
 def generate_school_physics_task():
     GRADES = {
@@ -388,7 +389,7 @@ def generate_school_physics_task():
             exercise = f"Энергия связи ядра {E:.1e} Дж. Найдите дефект массы."
             answer = f"Δm = E/c² = {E:.1e} / (3e8)² ≈ {E / 9e16:.1e} кг"
 
-    return book, exercise, answer
+    return book, exercise, answer, None
 
 def generate_probability_task():
     topics = ["классическая вероятность", "условная вероятность", "случайные величины"]
@@ -415,7 +416,7 @@ def generate_probability_task():
                    "\nНайдите математическое ожидание."
         answer = f"M(X) = {sum(xi * pi for xi, pi in zip(x, p)):.2f}"
 
-    return book, exercise, answer
+    return book, exercise, answer, None
 
 def generate_statistics_task():
     topics = ["описательная статистика", "доверительные интервалы", "проверка гипотез"]
@@ -444,7 +445,7 @@ def generate_statistics_task():
         exercise = f"Проверьте гипотезу о равенстве средних (α=0.05):\nГруппа 1: m={m1:.1f}, s={s1:.1f}, n={n1}\nГруппа 2: m={m2:.1f}, s={s2:.1f}, n={n2}"
         answer = "Расчет t-критерия Стьюдента (требуется дополнительное вычисление)"
 
-    return book, exercise, answer
+    return book, exercise, answer, None
 
 def generate_economics_task():
     topics = ["спрос и предложение", "эластичность", "издержки"]
@@ -471,7 +472,7 @@ def generate_economics_task():
         exercise = f"Рассчитайте общие издержки при FC={fc}, VC={vc} на единицу, Q={q}"
         answer = f"TC = FC + VC*Q = {fc} + {vc}*{q} = {fc + vc * q}"
 
-    return book, exercise, answer
+    return book, exercise, answer, None
 
 def generate_algebra_task():
     topics = ["линейные уравнения", "квадратные уравнения", "матрицы"]
@@ -501,7 +502,7 @@ def generate_algebra_task():
         det = m[0][0] * m[1][1] - m[0][1] * m[1][0]
         answer = f"det = {det}"
 
-    return book, exercise, answer
+    return book, exercise, answer, None
 
 def generate_calculus_task():
     topics = ["производные", "интегралы", "пределы"]
@@ -527,7 +528,7 @@ def generate_calculus_task():
         exercise = f"Найдите предел: lim(x→{point}) {func}"
         answer = "Использовать правило Лопиталя или алгебраические преобразования"
 
-    return book, exercise, answer
+    return book, exercise, answer, None
 
 def generate_crypto_task():
     topics = [
@@ -605,7 +606,7 @@ def generate_crypto_task():
                  f"K_A = B^a mod p = {K_A}, K_B = A^b mod p = {K_B}\n" + \
                  f"Общий ключ: {K_A}"
 
-    return book, exercise, answer
+    return book, exercise, answer, None
 
 def generate_networks_lab_task():
     topics = [
@@ -682,7 +683,7 @@ def generate_networks_lab_task():
 
     book = f"{book}. Лабораторная работа: {topic}"
 
-    return book, exercise, answer
+    return book, exercise, answer, None
 
 def generate_algorithms_lab_task():
     topics = [
@@ -776,7 +777,7 @@ def generate_algorithms_lab_task():
 
     book = f"{book}. Лабораторная работа: {topic}"
 
-    return book, exercise, answer
+    return book, exercise, answer, None
 
 def generate_number_theory_lab_task():
     topics = [
@@ -850,7 +851,7 @@ x ≡ {congruences[1][0]} mod {congruences[1][1]}
 
     book = f"{book}. Лабораторная работа: {topic}"
 
-    return book, exercise, answer
+    return book, exercise, answer, None
 
 def generate_security_models_lab_task():
     topics = [
@@ -960,7 +961,60 @@ def generate_security_models_lab_task():
 
     book = f"{book}. Лабораторная работа: {topic}"
 
-    return book, exercise, answer
+    return book, exercise, answer, None
+
+def _gen_gdz_random_image_random_answer_frog():
+    # Списки для случайного выбора
+    description_options = [
+        "лягушачья пропаганда",
+        "лягушачьи теории заговора",
+        "болотная вечеринка",
+        "Жабья инициация",
+        "Сеанс \"Жабьей Правды\"",
+        "Болотные Посиделки",
+        "театр Лягушачьего Абсурда"
+    ]
+
+    full_description_options = [
+        "покекать",
+        "почебурекать",
+        "стань лягушкой",
+        "погрузись в мир лягушек",
+        "олягушся"
+    ]
+
+    # Директории для изображений и цитат
+    IMAGES_DIR = os.path.join("Data_for_generations", "french_language", "images")
+    QUOTES_FILE = os.path.join("Data_for_generations", "french_language", "frogs.txt")
+
+    # Загрузка случайной цитаты
+    try:
+        with open(QUOTES_FILE, "r", encoding="utf-8") as f:
+            quotes = [line.strip() for line in f.readlines() if line.strip()]
+            random_quote = random.choice(quotes)
+    except Exception as e:
+        print(f"Ошибка загрузки цитат: {e}")
+        random_quote = "Ответ: 42"
+
+    # Случайный выбор описаний с добавлением префикса
+    prefix = "Обычное"
+    random_description = f"{prefix} ГДЗ: {random.choice(description_options)}"
+    random_full_description = f"{prefix} ГДЗ: {random.choice(full_description_options)}"
+
+    # Выбор случайного изображения
+    try:
+        images = [f for f in os.listdir(IMAGES_DIR)
+                  if f.lower().endswith(('.png', '.jpg', '.jpeg'))]
+
+        if not images:
+            raise ValueError("Нет изображений в директории")
+
+        random_image = random.choice(images)
+        image_path = os.path.join(IMAGES_DIR, random_image)
+
+    except Exception as e:
+        print(f"Ошибка выбора изображения: {e}")
+    return random_description, random_full_description, random_quote, image_path
 
 CATEGORY_GENERATORS = {
     "Школьные задачи_Алгебра": generate_school_algebra_task,
@@ -976,7 +1030,8 @@ CATEGORY_GENERATORS = {
     "Лабораторные работы_Компьютерные сети": generate_networks_lab_task,
     "Лабораторные работы_АИСД": generate_algorithms_lab_task,
     "Лабораторные работы_ТЧМК": generate_number_theory_lab_task,
-    "Лабораторные работы_Модели безопасности": generate_security_models_lab_task
+    "Лабораторные работы_Модели безопасности": generate_security_models_lab_task,
+    "Мемология_Уроки Французского": _gen_gdz_random_image_random_answer_frog
 }
 
 def dynamic_generate(category):
@@ -984,10 +1039,11 @@ def dynamic_generate(category):
         raise ValueError(f"Неверная категория: {category}. Доступные категории: {list(CATEGORY_GENERATORS.keys())}")
 
     generator = CATEGORY_GENERATORS[category]
-    book, exercise, answer = generator()
+    book, exercise, answer, path = generator()
     task = {
         "description": book,
         "full_description": exercise,
-        "content_text": answer
+        "content_text": answer,
+        "content": path
     }
     return task

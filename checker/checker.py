@@ -82,21 +82,22 @@ def _gen_user():
 
 
 CATEGORIES = [
-    "Университетские задачи_Мат.анализ",
-     "Лабораторные работы_Модели безопасности",
-     "Лабораторные работы_Компьютерные сети",
-     "Лабораторные работы_ТЧМК",
-     "Лабораторные работы_АИСД",
-     "Школьные задачи_Алгебра",
-     "Школьные задачи_Геометрия",
-     "Школьные задачи_Физика",
-     "Школьные задачи_Информатика",
-     "Университетские задачи_Экономика",
-     "Университетские задачи_КМЗИ",
-     "Университетские задачи_Мат.статистика",
-     "Университетские задачи_Теория вероятностей",
-     "Университетские задачи_Алгебра",
-
+    # "Университетские задачи_Мат.анализ",
+    #  "Лабораторные работы_Модели безопасности",
+    #  "Лабораторные работы_Компьютерные сети",
+    #  "Лабораторные работы_ТЧМК",
+    #  "Лабораторные работы_АИСД",
+    #  "Школьные задачи_Алгебра",
+    #  "Школьные задачи_Геометрия",
+    #  "Школьные задачи_Физика",
+    #  "Школьные задачи_Информатика",
+    #  "Университетские задачи_Экономика",
+    #  "Университетские задачи_КМЗИ",
+    #  "Университетские задачи_Мат.статистика",
+    #  "Университетские задачи_Теория вероятностей",
+    #  "Университетские задачи_Алгебра",
+     "Мемология_Уроки Французского",
+     # "Мемология_Инглиш мафака"
 ]
 
 def _gen_gdz(is_elite=False, is_paid=False):
@@ -106,18 +107,18 @@ def _gen_gdz(is_elite=False, is_paid=False):
         price = random.randint(50, 100)
     
     # Случайный выбор метода генерации (50/50)
-    use_static = random.choice([True, False])
-    
-    if use_static:
+    use_static = False
+
+
+    if use_static and category != "Мемология_Уроки Французского":
         print("Using static generation")
-        gdz = static_generate(category)
+        gdz = static_generate(category, is_elite)
         file_path = gdz["content"]  # Путь к файлу из static_generate
         gdz_data = {
             "description": gdz["description"],
             "full_description": gdz["full_description"],
             "category": category,
             "content_text": gdz["content_text"],
-            "content": file_path,  # Путь к файлу для сервера
             "price": price,
             "is_elite": is_elite
         }
@@ -125,17 +126,15 @@ def _gen_gdz(is_elite=False, is_paid=False):
     else:
         print("Using dynamic generation")
         gdz = dynamic_generate(category)
-        # Для динамической генерации content_text используется как content
         gdz_data = {
             "description": gdz["description"],
             "full_description": gdz["full_description"],
             "category": category,
             "content_text": gdz["content_text"],
-            "content": gdz["content_text"],  # Текст ответа для сервера
             "price": price,
             "is_elite": is_elite
         }
-        return gdz_data, None, category  # Нет файла
+        return gdz_data, gdz["content"], category  # Нет файла
 
 def _register(s, user):
     try:
