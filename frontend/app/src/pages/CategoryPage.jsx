@@ -12,7 +12,7 @@ const CategoryPage = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState(null);
   const [currentPage, setCurrentPage] = useState(1);
-  const pageSize = 10;
+  const pageSize = 10; // Количество ГДЗ на странице
 
   const parseSlug = (slug) => {
     const [firstPart, ...restParts] = slug.split("_");
@@ -37,7 +37,9 @@ const CategoryPage = () => {
 
         if (!response.ok) {
           if (response.status === 401) {
+            localStorage.removeItem("access_token");
             setError("Пожалуйста, войдите в систему");
+            navigate("/", { replace: true });
             return;
           }
           throw new Error(`Ошибка загрузки: ${response.statusText}`);
@@ -85,7 +87,7 @@ const CategoryPage = () => {
   if (error) return <div className="error-message">{error}</div>;
 
   return (
-    <div className="category-page page-container">
+    <div className="category-page">
       <header>
         <HeaderTop />
         <HeaderButtom2 />

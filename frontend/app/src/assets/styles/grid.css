@@ -10,13 +10,6 @@
   --clr-bouns: #ff2a6a;
 }
 
-.page-container {
-  min-height: 100vh;
-  display: flex;
-  flex-direction: column;
-  justify-content: space-between;
-}
-
 .grid {
   display: flex-grid;
   grid-template-rows: auto 1fr;
@@ -27,7 +20,6 @@
   height: auto;
   width: min(70vw, 1344px);
   padding-inline: min(15.625vw, 300px);
-  padding-bottom: 40px; /* Добавляем нижний отступ */
 }
 
 .row-complete {
@@ -46,6 +38,7 @@
   padding-top: 12px;
   padding-bottom: 12px;
   padding-left: 36px;
+  /* padding-right: 36px; */
   font-family: "Montserrat", sans-serif;
   font-weight: 700;
   font-size: 20px;
@@ -139,6 +132,7 @@
   gap: 12px;
   height: auto;
   width: auto;
+  /* overflow: hidden; */
   cursor: default;
 }
 
@@ -160,7 +154,7 @@
   justify-content: center;
   align-items: center;
   margin-top: 20px;
-  margin-bottom: 40px; /* Добавляем нижний отступ */
+  margin-bottom: 40px;
   gap: 12px;
   flex-wrap: wrap;
 }
@@ -185,8 +179,8 @@
 }
 
 .pagination-button:hover:not(:disabled) {
-  background-color: var(--clr-accent-hover); /* Желтый цвет при наведении */
-  color: var(--clr-dark); /* Темный текст для контраста */
+  background-color: var(--clr-accent-hover);
+  color: var(--clr-dark);
   transform: scale(0.95);
   box-shadow: 0px 0px 4px 2px rgba(0, 0, 0, 0.1);
 }
@@ -204,13 +198,13 @@
 }
 
 .pagination-page.active {
-  background-color: var(--clr-accent); /* Основной желтый для активной страницы */
-  color: var(--clr-dark); /* Темный текст для контраста */
+  background-color: var(--clr-accent);
+  color: var(--clr-dark);
   box-shadow: 0px 0px 4px 2px rgba(0, 0, 0, 0.1);
 }
 
 .pagination-page.active:hover {
-  background-color: var(--clr-accent); /* Сохраняем желтый при наведении на активную */
+  background-color: var(--clr-accent);
   transform: none;
 }
 
@@ -235,5 +229,9 @@
 
   .pagination {
     margin-bottom: 20px;
+  }
+
+  .hwPanel {
+    min-width: 100%;
   }
 }

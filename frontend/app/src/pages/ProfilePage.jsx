@@ -11,7 +11,7 @@ const ProfilePage = () => {
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
     const [currentPage, setCurrentPage] = useState(1);
-    const pageSize = 3; // Количество ГДЗ на странице
+    const pageSize = 10; // Количество ГДЗ на странице
     const navigate = useNavigate();
 
     useEffect(() => {

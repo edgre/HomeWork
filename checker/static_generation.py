@@ -1530,6 +1530,58 @@ Statistic = [
     }
 ]
 
+english = [
+    {
+        "description": "Инглиш, Задача 1",
+        "full_description": "AWS делает расчет за использользование сервера",
+        "content_text": "ха-ха"
+    },
+{
+        "description": "Инглиш, Задача 2",
+        "full_description": "это даже не сгенерировано, патент реальный, вот и думайте",
+        "content_text": "ха-ха"
+},
+
+{
+        "description": "Инглиш, Задача 3",
+        "full_description": "Учителям английского языка запретят использовать глагол Put out",
+        "content_text": "ха-ха"
+},
+
+{
+        "description": "Инглиш, Задача 4",
+        "full_description": "Сова Duolingo дала лучшую мотивацию для изучения английского языка",
+        "content_text": "ха-ха"
+},
+{
+        "description": "Инглиш, Задача 5",
+        "full_description": "Плачь, Tesla! Власти анонсировали российско-белорусский электромобиль",
+        "content_text": "ха-ха"
+},
+{
+        "description": "Инглиш, Задача 6",
+        "full_description": "Минфин представил новую формулу расчета налогов в России",
+        "content_text": "ха-ха"
+},
+{
+        "description": "Инглиш, Задача 7",
+        "full_description": "Когда не читал документацию к библиотеке и налепил код из примеров на гитхабе",
+        "content_text": "ха-ха"
+},
+{
+        "description": "Инглиш, Задача 8",
+        "full_description": "В Google Translator появятся зумерский и кальянный языки",
+        "content_text": "ха-ха"
+
+},
+{
+        "description": "Инглиш, Задача 9",
+        "full_description": "Безвыходная ситуация",
+        "content_text": "ха-ха"
+},
+]
+
+
 CATEGORY_GENERATORS = {
     "Школьные задачи_Алгебра": SCHOOL_ALGEBRA,
     "Школьные задачи_Геометрия": SCHOOL_GEOMETRY,
@@ -1544,12 +1596,11 @@ CATEGORY_GENERATORS = {
     "Лабораторные работы_Компьютерные сети": Networks,
     "Лабораторные работы_АИСД": ADS ,
     "Лабораторные работы_ТЧМК": TCMK,
-    "Лабораторные работы_Модели безопасности": MBKS
-
+    "Лабораторные работы_Модели безопасности": MBKS,
+    "Мемология_Инглиш мафака":english
 }
 
 def static_generate(category):
-    print("A")
     subject = CATEGORY_GENERATORS[category]
     task = random.choice(subject)
 
@@ -1558,10 +1609,6 @@ def static_generate(category):
     content_text = task["content_text"]
     content = os.path.join("Data_for_generations", "tasks", f"{task['description']}.png")
 
-    if not os.path.exists(content):
-        print("Файл не найден")
-    else:
-        print("Да, есть такой файл не гони")
 
     task = {
         "description": description,

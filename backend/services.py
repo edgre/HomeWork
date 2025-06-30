@@ -438,6 +438,7 @@ async def confirm_purchase(
     else:
         raise HTTPException(status_code=400, detail="Введено неверное значение")
 
+
 async def rate_gdz(
         rating: schemas.GDZRatingIn,
         db: orm.Session,

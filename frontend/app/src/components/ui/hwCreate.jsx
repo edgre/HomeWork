@@ -291,7 +291,7 @@ const HomeworkCreate = () => {
         </div>
         <div className="form-group">
           <h4 style={{ color: "#000", marginBottom: "8px" }}>
-            Загрузить решение (PDF, Word, изображения)
+            Загрузить решение (jpeg, png, jpg)
           </h4>
           <FileUploadButton onFileSelect={setFile} />
           {file && (

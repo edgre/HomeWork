@@ -16,7 +16,9 @@ const PreviewHomework = ({ gdzId, onClose, flagToNotSetRating = 0, isStandaloneP
         answerText: "Загрузка...",
         photoUrl: defaultPhoto,
         isLoading: true,
-        error: null
+        error: null,
+        ownerId: null,
+        isFree: false, // Только isFree вместо price
     });
 
     const [isLoading, setIsLoading] = useState(true);
@@ -61,7 +63,8 @@ const PreviewHomework = ({ gdzId, onClose, flagToNotSetRating = 0, isStandaloneP
                     photoUrl: gdzData.content,
                     isLoading: false,
                     error: null,
-                    ownerId: gdzData.owner_id
+                    ownerId: gdzData.owner_id,
+                    isFree: gdzData.price === 0, // Определяем бесплатность
                 });
             } catch (err) {
                 setData({
@@ -69,7 +72,8 @@ const PreviewHomework = ({ gdzId, onClose, flagToNotSetRating = 0, isStandaloneP
                     answerText: "Ошибка загрузки",
                     photoUrl: defaultPhoto,
                     isLoading: false,
-                    error: err.message
+                    error: err.message,
+                    isFree: true,
                 });
             }
         };
@@ -129,18 +133,19 @@ const PreviewHomework = ({ gdzId, onClose, flagToNotSetRating = 0, isStandaloneP
                 {error ? (
                     <div className="photo-error">Ошибка загрузки</div>
                 ) : (
-                    <img
-                        src={data.photoUrl}
-                        className="photo-image"
-                        onLoad={handleImageLoad}
-                        onError={handleImageError}
-                    />
-                )}
+                        <img
+                            src={data.photoUrl}
+                            className="photo-image"
+                            onLoad={handleImageLoad}
+                            onError={handleImageError}
+                        />
+                    )}
             </div>
             <h2 className="bold">Ответ</h2>
             <h4>{data.answerText}</h4>
 
-            {flagToNotSetRating === 0 && !isOwner && (
+            {/* Показываем звёзды только для платных ГДЗ, если пользователь не владелец */}
+            {flagToNotSetRating === 0 && !isOwner && !data.isFree && (
                 <>
                     <RatingInput
                         label="Оцените работу пользователя"
