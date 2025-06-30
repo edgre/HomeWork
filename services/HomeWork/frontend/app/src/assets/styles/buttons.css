@@ -1,0 +1,123 @@
+.button {
+  background-color: var(--clr-accent);
+  height: 36px;
+  padding-top: auto;
+  padding-bottom: auto;
+  padding-left: 18px;
+  padding-right: 18px;
+  gap: 10px;
+  align-items: center;
+  font-size: 16px;
+  border-radius: 8px;
+  border: none;
+  font-weight: 600;
+  z-index: 998;
+  cursor: pointer;
+}
+
+.button:hover,
+.button:hover::before {
+  background-color: var(--clr-accent-hover);
+  transition-duration: var(--transition-duration);
+}
+
+.buttonWhite {
+  background-color: var(--clr-light);
+  height: 32px;
+  padding-top: auto;
+  padding-bottom: auto;
+  padding-left: 18px;
+  padding-right: 18px;
+  font-size: 16px;
+  border-radius: 8px;
+  border: 1px solid var(--clr-dark);
+  font-weight: 600;
+  cursor: pointer;
+  transition: ease;
+}
+
+.buttonWhite:hover,
+.buttonWhite:hover::before {
+  background-color: var(--clr-dark);
+  color: var(--clr-light);
+  transition-duration: var(--transition-duration);
+}
+
+.buttonGrey {
+  display: inline-flex;
+  background-color: var(--clr-grey-1);
+  height: 36px;
+  padding-top: auto;
+  padding-bottom: auto;
+  padding-left: 18px;
+  padding-right: 18px;
+  align-items: center;
+  font-size: 16px;
+  border-radius: 8px;
+  border: none;
+  font-weight: 600;
+  cursor: pointer;
+  transition: ease;
+}
+
+.buttonGrey img {
+  width: 20px;
+  height: 20px;
+  margin-right: 10px; /* Отступ между иконкой и текстом */
+}
+
+.buttonGrey:hover,
+.buttonGrey:hover::before {
+  background-color: var(--clr-grey-2);
+  transition-duration: var(--transition-duration);
+}
+
+.icon-button {
+  display: flex;
+  min-width: 20px;
+  background: none;
+  border: none;
+  border-radius: 2px;
+  cursor: pointer;
+  padding: 0;
+  align-items: center;
+  justify-content: center;
+  height: 64px;
+}
+
+.icon-button:hover,
+.icon-button:hover::before {
+  transition-duration: var(--transition-duration) ease;
+}
+
+.ratingLabel {
+  display: inline-flex;
+  background: none;
+  gap: 6px;
+  align-items: center;
+  justify-content: center;
+  margin-top: 8px;
+  height: 36px;
+  font-weight: 600;
+  cursor: default;
+}
+
+.button-with-custom-hitbox {
+  position: relative;
+  width: 200px;
+  height: 100px;
+}
+.button-with-custom-hitbox::after {
+  content: "";
+  position: absolute;
+  top: 20px;
+  left: 20px;
+  width: 40px;
+  height: 40px;
+  background: transparent;
+  cursor: pointer;
+}
+
+.button-with-custom-hitbox:hover::after {
+  background: rgba(0, 0, 255, 0.1); /* Для визуализации при наведении */
+}

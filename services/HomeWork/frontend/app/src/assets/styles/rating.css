@@ -1,0 +1,32 @@
+.rating-container {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 16px;
+  padding: 12px 20px;
+  margin-top: 8px;
+  background-color: #f5f5f5;
+  border-radius: 12px;
+  max-width: 400px;
+}
+
+.rating-label {
+  font-size: 16px;
+  color: var(--clr-dark);
+}
+
+.stars-container {
+  display: flex;
+  gap: 4px;
+}
+
+.star-icon {
+  width: 24px;
+  height: 24px;
+  cursor: pointer;
+}
+
+.star-icon:hover {
+  transform: scale(1.1);
+  transition: transform 0.2s ease;
+}

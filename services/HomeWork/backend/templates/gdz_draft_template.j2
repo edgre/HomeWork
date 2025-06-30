@@ -1,0 +1,12 @@
+{
+    "id": {{ id }},
+    "owner_id": {{ owner_id }},
+    "gdz_id": {% if gdz_id %}{{ gdz_id }}{% else %}null{% endif %},
+    "description": {{ description }},
+    "full_description": "{{full_description}}",
+    "category": "{{ category }}",
+    "subject": "{{ subject }}",
+    "content_text": "{{ content_text }}",
+    "price": {{ price }},
+    "is_elite": {% if is_elite %}true{% else %}false{% endif %}
+}
