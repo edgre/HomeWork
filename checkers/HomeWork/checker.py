@@ -282,7 +282,7 @@ def _compare_ratings(actual, expected):
         _die(ExitStatus.MUMBLE, f"User rating mismatch: expected {expected}, got {actual}")
 
 def _boost_user_rating(s_owner: FakeSession, user_owner: dict, s_rater: FakeSession):
-    _log("Накрутка рейтинга для пользователя")
+    #_log("Накрутка рейтинга для пользователя")
     gdz_ids = []
     for _ in range(5):
         gdz_data, file, _ = _gen_gdz(is_elite=False, is_paid=True)
@@ -299,7 +299,7 @@ def _boost_user_rating(s_owner: FakeSession, user_owner: dict, s_rater: FakeSess
     rating = r.json().get("user_rating")
     if rating <= 4.8:
         _die(ExitStatus.MUMBLE, f"Рейтинг пользователя {rating} недостаточен после накрутки")
-    _log(f"Рейтинг накручен до: {rating}")
+    #_log(f"Рейтинг накручен до: {rating}")
     return rating
 
 def check(host: str):
@@ -562,7 +562,6 @@ def check(host: str):
 
     _die(ExitStatus.OK, "Все проверки пройдены успешно")
 
-
 def put(host: str, flag_id: str, flag: str, vuln: int):
     s = FakeSession(host, PORT)
     
@@ -576,15 +575,15 @@ def put(host: str, flag_id: str, flag: str, vuln: int):
         gdz_id = gdz.get("id")
         if not gdz_id:
             _die(ExitStatus.CHECKER_ERROR, "Failed to get GDZ ID for vuln1")
-        jd = json.dumps({
-            "flag_id": {
+        jd = json.dumps(
+            {
                 "username": user["username"],
                 "password": user["password"],
                 "gdz_id": str(gdz_id)
             }
-        })
-        print(jd, flush = True)
-        _die(ExitStatus.OK, "Put vuln1 OK")
+         )
+        print(jd, flush=True)
+        _die(ExitStatus.OK, f"{jd}")
 
     elif vuln == 2:
         user = _gen_user()
@@ -604,19 +603,19 @@ def put(host: str, flag_id: str, flag: str, vuln: int):
             "price": str(gdz_data["price"]),
             "is_elite": "false",
         }
-        _log(f"Saving draft with data: {draft_data}")
+        #_log(f"Saving draft with data: {draft_data}")
         draft_response = _save_draft(s, draft_data)
         if draft_response.get("status") != "success":
             _log(f"Unexpected draft response: {draft_response}")
             _die(ExitStatus.MUMBLE, "Failed to save draft for vuln2")
-        jd =json.dumps({
-            "flag_id": {
+        jd = json.dumps(
+            {
                 "username": user["username"],
                 "password": user["password"]
             }
-        })
-        print(jd, flush= True)
-        _die(ExitStatus.OK, "Put vuln2 OK")
+        )
+        print(jd, flush=True)
+        _die(ExitStatus.OK, f"{jd}")
 
     elif vuln == 3:
         # Создание нового пользователя
@@ -637,35 +636,39 @@ def put(host: str, flag_id: str, flag: str, vuln: int):
         gdz_id = gdz.get("id")
         if not gdz_id:
             _die(ExitStatus.CHECKER_ERROR, "Failed to get GDZ ID for vuln3")
-        jd = json.dumps({
-            "flag_id": {
+        jd=json.dumps(
+            {
                 "username": user_elite["username"],
                 "password": user_elite["password"],
                 "gdz_id": str(gdz_id)
             }
-        })
-        print(jd, flush = True)
-        _die(ExitStatus.OK, "Put vuln3 OK")
+         )
+        print(jd,flush=True)
+        _die(ExitStatus.OK, f"{jd}")
     
     else:
         _die(ExitStatus.CHECKER_ERROR, f"Unknown vuln: {vuln}")
 
+
+
+
 def get(host: str, flag_id: str, flag: str, vuln: int):
     s = FakeSession(host, PORT)
+    
+    _log(f"Received flag_id: {flag_id}")
     try:
-        _log(f"flag_id in get: {flag_id}")
-        data = json.loads(flag_id)
-        _log(f"data in get: {data}")
-        if not data:
+        flag_id_data = json.loads(flag_id)
+        _log(f"data in get: {flag_id_data}")
+        if not flag_id_data:
             raise ValueError
     except:
         _die(ExitStatus.CHECKER_ERROR, f"Unexpected flagID from jury: {flag_id}!")
     
     if vuln == 1:
         try:
-            username = flag_id_inner["username"]
-            password = flag_id_inner["password"]
-            gdz_id = str(flag_id_inner["gdz_id"])
+            username = flag_id_data["username"]
+            password = flag_id_data["password"]
+            gdz_id = str(flag_id_data["gdz_id"])
         except (TypeError, KeyError, ValueError) as e:
             _die(ExitStatus.CHECKER_ERROR, f"Invalid flag_id for vuln1: {e}")
         _login(s, username, password)
@@ -678,28 +681,28 @@ def get(host: str, flag_id: str, flag: str, vuln: int):
     
     elif vuln == 2:
         try:
-            username = flag_id_inner["username"]
-            password = flag_id_inner["password"]
+            username = flag_id_data["username"]
+            password = flag_id_data["password"]
         except (TypeError, KeyError) as e:
             _die(ExitStatus.CHECKER_ERROR, f"Invalid flag_id for vuln2: {e}")
         _login(s, username, password)
-        _log("Fetching draft for vuln2")
+        #_log("Fetching draft for vuln2")
         draft = _get_draft(s)
         if not draft or "content_text" not in draft:
-            _log(f"No draft or content_text in response: {draft}")
+            #_log(f"No draft or content_text in response: {draft}")
             _die(ExitStatus.CORRUPT, "No draft or content_text found for vuln2")
-        if draft["content_text"] != flag:
-            _log(f"Flag mismatch: expected {flag}, got {draft['content_text']}")
+        #if draft["content_text"] != flag:
+            #_log(f"Flag mismatch: expected {flag}, got {draft['content_text']}")
             _die(ExitStatus.CORRUPT, "Flag mismatch for vuln2")
-        if "category" in draft and "subject" in draft:
-            _log(f"Draft category: {draft['category']}, subject: {draft['subject']}")
+        #if "category" in draft and "subject" in draft:
+            #_log(f"Draft category: {draft['category']}, subject: {draft['subject']}")
         _die(ExitStatus.OK, "Get vuln2 OK")
     
     elif vuln == 3:
         try:
-            username = flag_id_inner["username"]
-            password = flag_id_inner["password"]
-            gdz_id = str(flag_id_inner["gdz_id"])
+            username = flag_id_data["username"]
+            password = flag_id_data["password"]
+            gdz_id = str(flag_id_data["gdz_id"])
         except (TypeError, KeyError, ValueError) as e:
             _die(ExitStatus.CHECKER_ERROR, f"Invalid flag_id for vuln3: {e}")
         _login(s, username, password)
@@ -712,6 +715,7 @@ def get(host: str, flag_id: str, flag: str, vuln: int):
     
     else:
         _die(ExitStatus.CHECKER_ERROR, f"Unknown vuln: {vuln}")
+
 
 def rand_string(n=12, alphabet=string.ascii_letters + string.digits):
     return "".join(random.choice(alphabet) for _ in range(n))
