@@ -1,5 +1,15 @@
 import random
 import string
+import sys
+import os
+
+def get_base_path():
+    """Возвращает абсолютный путь к директории чекера"""
+    if getattr(sys, 'frozen', False):
+        # Для исполняемых файлов (pyinstaller)
+        return os.path.dirname(sys.executable)
+    return os.path.dirname(os.path.abspath(__file__))
+
 
 class User:
     def __init__(self, realname: str, username: str, password: str):
@@ -26,6 +36,8 @@ class User:
             result += translit_map.get(char, char)
         return result
 
+
+
     @classmethod
     def generate_username(cls, name, surname):
         base_username = cls.transliterate(name + surname)
@@ -45,10 +57,15 @@ class User:
 
     @classmethod
     def generate(cls):
-        male_names = cls.read_words_from_file("Data_for_generations/male_names_rus.txt")
-        male_surnames = cls.read_words_from_file("Data_for_generations/male_surnames_rus.txt")
-        female_names = cls.read_words_from_file("Data_for_generations/female_names_rus.txt")
-        female_surnames = cls.read_words_from_file("Data_for_generations/female_surnames_rus.txt")
+        BASE_DIR = get_base_path()
+        DATA_DIR = os.path.join(BASE_DIR, 'Data_for_generations')
+
+# Затем везде, где вы загружаете файлы, используйте:
+        male_names_path = os.path.join(DATA_DIR, 'male_names_rus.txt')
+        male_names = cls.read_words_from_file(os.path.join(DATA_DIR, 'male_names_rus.txt'))
+        male_surnames = cls.read_words_from_file(os.path.join(DATA_DIR, 'male_surnames_rus.txt'))
+        female_names = cls.read_words_from_file(os.path.join(DATA_DIR, 'female_names_rus.txt'))
+        female_surnames = cls.read_words_from_file(os.path.join(DATA_DIR, 'female_surnames_rus.txt'))
 
         gender = random.choice(["male", "female"])
         if gender == "male":

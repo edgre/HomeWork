@@ -18,6 +18,6 @@ COPY --from=build /app/dist /srv
 COPY Caddyfile /etc/caddy/Caddyfile
 
 # Открываем порт 80 (или 443 для HTTPS)
-EXPOSE 80
+EXPOSE 81
 
 CMD ["caddy", "run", "--config", "/etc/caddy/Caddyfile"]

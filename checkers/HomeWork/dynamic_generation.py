@@ -3,6 +3,7 @@ import math
 from math import pi, sqrt, factorial, gcd, log2
 from sympy import symbols, diff, integrate, sin, cos, tan, isprime, mod_inverse
 import os
+import sys
 
 
 # Базы данных для генерации учебников
@@ -963,6 +964,13 @@ def generate_security_models_lab_task():
 
     return book, exercise, answer, None
 
+def get_base_path():
+    """Возвращает абсолютный путь к директории чекера"""
+    if getattr(sys, 'frozen', False):
+        # Для исполняемых файлов (pyinstaller)
+        return os.path.dirname(sys.executable)
+    return os.path.dirname(os.path.abspath(__file__))
+
 def _gen_gdz_random_image_random_answer_frog():
     # Списки для случайного выбора
     description_options = [
@@ -983,9 +991,10 @@ def _gen_gdz_random_image_random_answer_frog():
         "олягушся"
     ]
 
+    BASE_DIR = get_base_path()
     # Директории для изображений и цитат
-    IMAGES_DIR = os.path.join("Data_for_generations", "french_language", "images")
-    QUOTES_FILE = os.path.join("Data_for_generations", "french_language", "frogs.txt")
+    IMAGES_DIR = os.path.join(BASE_DIR, "Data_for_generations", "french_language", "images")
+    QUOTES_FILE = os.path.join(BASE_DIR, "Data_for_generations", "french_language", "frogs.txt")
 
     # Загрузка случайной цитаты
     try:
@@ -1050,8 +1059,10 @@ def _gen_gdz_js(is_elite=False, is_paid=False):
         "Иногда, в час отчаяния, мы взываем к Оракулу, именуемому console.log, в надежде, что он прольёт свет на тёмные процессы, происходящие внутри. Но его ответы — лишь неясные тени, искажённые отражения истинной природы объектов. И чем глубже мы погружаемся в трассировку стека, тем яснее понимаем, что ошибка — не в коде, а в самой ткани реальности, которую мы пытались подчинить своей воле."
     ]
 
+    BASE_DIR = get_base_path()
     # Директории для изображений
-    IMAGES_DIR = os.path.join("Data_for_generations", "js")
+    IMAGES_DIR = os.path.join(BASE_DIR, "Data_for_generations", "js")
+    print(IMAGES_DIR)
 
 
     # Выбираем случайный индекс
@@ -1088,8 +1099,9 @@ def _gen_memology():
     full_description_options = "Мемология - царица наук"
     content_text = "ха-ха"
 
+    BASE_DIR = get_base_path()
     # Директории для изображений и цитат
-    IMAGES_DIR = os.path.join("Data_for_generations", "just memes images")
+    IMAGES_DIR = os.path.join(BASE_DIR, "Data_for_generations", "just memes images")
 
 
     # Выбор случайного изображения

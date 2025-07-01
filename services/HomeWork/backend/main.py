@@ -10,6 +10,9 @@ from typing import List, Dict, Optional, Any
 from fastapi import Depends, status
 from sqlalchemy.orm import Session
 from pathlib import Path
+from threading import Lock
+
+rating_lock = Lock()
 
 app = FastAPI()
 
@@ -59,7 +62,8 @@ async def get_profile_data(
         db: Session = Depends(get_db),
         current_user: models.User = Depends(services.get_current_user)
 ):
-    return await services.get_profile_data(db, current_user)
+     with rating_lock: 
+        return await services.get_profile_data(db, current_user)
 
 @app.get("/category", response_model=List[str])
 async def get_subjects(db: Session = Depends(get_db)):
@@ -149,7 +153,8 @@ async def rate_gdz(
         db: Session = Depends(get_db),
         current_user: models.User = Depends(services.get_current_user)
 ):
-    return await services.rate_gdz(rating, db, current_user)
+    with rating_lock:
+        return await services.rate_gdz(rating, db, current_user)
 
 @app.post("/gdz/save_draft")
 async def save_draft(
