@@ -35,7 +35,6 @@ TRACE = os.getenv("TRACE", False)
 
 start_time = time.time()
 
-
 class FakeSession(requests.Session):
     USER_AGENTS = [
         "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/114.0.0.0 Safari/537.36",
@@ -69,7 +68,6 @@ class FakeSession(requests.Session):
         if TRACE:
             print("[TRACE] {method} {url} {r.status_code}".format(method=method, url=url, r=r.status_code))
         return r
-
 
 def _gen_user():
     try:
@@ -106,7 +104,6 @@ CATEGORIES = [
     # "Мемология_Царица наук"
 ]
 
-
 def _gen_gdz(is_elite=False, is_paid=False):
     category = random.choice(CATEGORIES)
     price = 0
@@ -117,9 +114,8 @@ def _gen_gdz(is_elite=False, is_paid=False):
     use_static = random.choice([True, False])
     use_static = False
 
-    if (
-            use_static or category == "Мемология_Инглиш мафака") and category != "Мемология_Уроки Французского" and category != "Мемология_Царица наук":
-        print("Using static generation")
+    if (use_static or category == "Мемология_Инглиш мафака") and category != "Мемология_Уроки Французского" and category != "Мемология_Царица наук":
+        # print("Using static generation")
         gdz = static_generate(category)
         file_path = gdz["content"]  # Путь к файлу из static_generate
         gdz_data = {
@@ -132,7 +128,7 @@ def _gen_gdz(is_elite=False, is_paid=False):
         }
         return gdz_data, file_path, category
     else:
-        print("Using dynamic generation")
+        # print("Using dynamic generation")
         gdz = dynamic_generate(category)
         gdz_data = {
             "description": gdz["description"],
@@ -144,7 +140,6 @@ def _gen_gdz(is_elite=False, is_paid=False):
         }
         return gdz_data, gdz["content"], category  # Нет файла
 
-
 def _register(s, user):
     try:
         r = s.post("/register", json=user)
@@ -154,7 +149,6 @@ def _register(s, user):
         _log(f"Unexpected /register code {r.status_code} with body {r.text}")
         _die(ExitStatus.MUMBLE, f"Unexpected /register code {r.status_code}")
     return r.json()
-
 
 def _login(s, username, password):
     try:
@@ -192,14 +186,12 @@ def _create_gdz(s, gdz_data, file_path):
         _die(ExitStatus.MUMBLE, f"Unexpected /gdz/create code {r.status_code}")
     return r.json()
 
-
 def _get_gdz(s, gdz_id):
     try:
         r = s.get(f"/gdz/{gdz_id}/full")
     except Exception as e:
         _die(ExitStatus.DOWN, f"Failed to get GDZ: {e}")
     return r  # Return response directly to handle status codes in caller
-
 
 def _free_purchase_gdz(s, gdz_id):
     try:
@@ -210,7 +202,6 @@ def _free_purchase_gdz(s, gdz_id):
         _log(f"Unexpected /gdz/{gdz_id}/free-purchase code {r.status_code} with body {r.text}")
         _die(ExitStatus.MUMBLE, f"Unexpected /gdz/{gdz_id}/free-purchase code {r.status_code}")
     return r.json()
-
 
 def _purchase_gdz(s, gdz_id):
     try:
@@ -223,6 +214,7 @@ def _purchase_gdz(s, gdz_id):
     confirmation_code = r.json().get("confirmation_code")
     if not confirmation_code:
         _die(ExitStatus.MUMBLE, f"No confirmation code in purchase response")
+
 
     n = 160301046244593794374726426877457303604019537423736458260136643925405546154653037172463089669436445456557499425029994701102494179131569495553118775092473011745647436677950345054183103280168169605050154349614937369702539109115434630721210013794356412532578527347021846882486616784364644818143571566741240343519
     d = 106867364163062529583150951251638202402679691615824305506757762616937030769768691448308726446290963637704999616686663134068329452754379663702079183394981990945329295012055489191325887232050991358371457973464894055499039990700519040610630249324976268648754088450636207724270010117036618338292116885343831669547
@@ -254,7 +246,6 @@ def _rate_gdz(s, gdz_id, value):
         _die(ExitStatus.MUMBLE, f"Unexpected /gdz/rate code {r.status_code}")
     return r.json()
 
-
 def _check_category(s, category, gdz_id):
     try:
         r = s.get(f"/gdz_category/{category}")
@@ -268,7 +259,6 @@ def _check_category(s, category, gdz_id):
         _die(ExitStatus.MUMBLE, f"GDZ {gdz_id} not found in category {category}")
     return gdz_list
 
-
 def _save_draft(s, draft_data):
     try:
         r = s.post("/gdz/save_draft", json=draft_data)
@@ -278,7 +268,6 @@ def _save_draft(s, draft_data):
         _log(f"Unexpected /gdz/save_draft code {r.status_code} with body {r.text}")
         _die(ExitStatus.MUMBLE, f"Unexpected /gdz/save_draft code {r.status_code}")
     return r.json()
-
 
 def _get_draft(s):
     try:
@@ -290,11 +279,9 @@ def _get_draft(s):
         _die(ExitStatus.MUMBLE, f"Unexpected /gdz/get_draft code {r.status_code}")
     return r.json()
 
-
 def _compare_ratings(actual, expected):
     if abs(actual - expected) > 0.01:
         _die(ExitStatus.MUMBLE, f"User rating mismatch: expected {expected}, got {actual}")
-
 
 def _boost_user_rating(s_owner: FakeSession, user_owner: dict, s_rater: FakeSession):
     _log("Накрутка рейтинга для пользователя")
@@ -317,7 +304,6 @@ def _boost_user_rating(s_owner: FakeSession, user_owner: dict, s_rater: FakeSess
         _die(ExitStatus.MUMBLE, f"Рейтинг пользователя {rating} недостаточен после накрутки")
     _log(f"Рейтинг накручен до: {rating}")
     return rating
-
 
 def check(host: str):
     s1 = FakeSession(host, PORT)
@@ -376,8 +362,7 @@ def check(host: str):
         _die(ExitStatus.MUMBLE, f"Неожиданный код /profile/data {r1.status_code} или {r2.status_code}")
     profile1 = r1.json()
     profile2 = r2.json()
-    if not any(g["id"] == gdz1_id for g in profile1["gdz_list"]) or not any(
-            g["id"] == gdz2_id for g in profile2["gdz_list"]):
+    if not any(g["id"] == gdz1_id for g in profile1["gdz_list"]) or not any(g["id"] == gdz2_id for g in profile2["gdz_list"]):
         _die(ExitStatus.MUMBLE, "ГДЗ не найдено в профилях пользователей")
 
     _log("Проверка категории для ГДЗ пользователя 2")
@@ -406,7 +391,7 @@ def check(host: str):
         if r_ratings.status_code != 200:
             _die(ExitStatus.MUMBLE, f"Неожиданный код /gdz/my/ratings {r_ratings.status_code}")
         ratings = r_ratings.json()
-        print(ratings)
+        # print(ratings)
         if len(ratings) >= 2:
             first_time = ratings[0]["created_at"]
             last_time = ratings[-1]["created_at"]
@@ -474,6 +459,7 @@ def check(host: str):
         _compare_ratings(actual_rating, expected_rating)
     except Exception as e:
         _die(ExitStatus.DOWN, f"Ошибка при повторной проверке оценок: {e}")
+
 
     _log("Создание черновика и его проверка")
     category_part2, subject_part2 = category2.split("_", 1)
@@ -547,8 +533,7 @@ def check(host: str):
         _die(ExitStatus.MUMBLE, f"Неожиданный код /profile/data {r4.status_code}")
     actual_rating_user4 = r4.json()["user_rating"]
     if actual_rating_user4 >= 4.8:
-        _die(ExitStatus.MUMBLE,
-             f"Рейтинг пользователя 4 {actual_rating_user4} неожиданно достаточен для доступа к элитным ГДЗ")
+        _die(ExitStatus.MUMBLE, f"Рейтинг пользователя 4 {actual_rating_user4} неожиданно достаточен для доступа к элитным ГДЗ")
 
     _log("Проверка, что пользователь 4 с низким рейтингом не может создать элитное ГДЗ")
     gdz_data_elite_user4, file_elite_user4, _ = _gen_gdz(is_elite=True, is_paid=False)
@@ -564,11 +549,9 @@ def check(host: str):
             })
 
         if r_elite_attempt_user4.status_code != 403:
-            _die(ExitStatus.MUMBLE,
-                 f"Ожидался код 403 для создания элитного ГДЗ пользователем 4, получен {r_elite_attempt_user4.status_code}")
+            _die(ExitStatus.MUMBLE, f"Ожидался код 403 для создания элитного ГДЗ пользователем 4, получен {r_elite_attempt_user4.status_code}")
         if "Недостаточный рейтинг для создания элитного ГДЗ" not in r_elite_attempt_user4.text:
-            _die(ExitStatus.MUMBLE,
-                 "Ожидаемое сообщение об ошибке недостаточного рейтинга не найдено для пользователя 4")
+            _die(ExitStatus.MUMBLE, "Ожидаемое сообщение об ошибке недостаточного рейтинга не найдено для пользователя 4")
     except Exception as e:
         _die(ExitStatus.DOWN, f"Не удалось попытаться создать элитное ГДЗ пользователем 4: {e}")
 
@@ -621,10 +604,10 @@ def put(host: str, flag_id: str, flag: str, vuln: int):
             "price": str(gdz_data["price"]),
             "is_elite": "false",
         }
-        _log(f"Saving draft with data: {draft_data}")
+        # _log(f"Saving draft with data: {draft_data}")
         draft_response = _save_draft(s, draft_data)
         if draft_response.get("status") != "success":
-            _log(f"Unexpected draft response: {draft_response}")
+            # _log(f"Unexpected draft response: {draft_response}")
             _die(ExitStatus.MUMBLE, "Failed to save draft for vuln2")
         jd = json.dumps(
             {
@@ -656,18 +639,20 @@ def put(host: str, flag_id: str, flag: str, vuln: int):
         gdz_id = gdz.get("id")
         if not gdz_id:
             _die(ExitStatus.CHECKER_ERROR, "Failed to get GDZ ID for vuln3")
-        jd = json.dumps(
+        jd=json.dumps(
             {
                 "username": user_elite["username"],
                 "password": user_elite["password"],
                 "gdz_id": str(gdz_id)
             }
         )
-        print(jd, flush=True)
-        _die(ExitStatus.OK, "Put vuln3 OK", f"{jd}")
+        print(jd,flush=True)
+        _die(ExitStatus.OK,f"{jd}")
 
     else:
         _die(ExitStatus.CHECKER_ERROR, f"Unknown vuln: {vuln}")
+
+
 
 
 def get(host: str, flag_id: str, flag: str, vuln: int):
@@ -738,19 +723,16 @@ def get(host: str, flag_id: str, flag: str, vuln: int):
 def rand_string(n=12, alphabet=string.ascii_letters + string.digits):
     return "".join(random.choice(alphabet) for _ in range(n))
 
-
 def _log(obj):
     if DEBUG and obj:
-        elapsed_time = time.time() - start_time
+        # elapsed_time = time.time() - start_time
         caller = inspect.stack()[1].function
-        print(f"{elapsed_time}[{caller}] {obj}", file=sys.stderr)
+        print(f"[{caller}] {obj}", file=sys.stderr)
     return obj
-
 
 def info():
     print("vulns: 2:2:1", flush=True, end="")
     exit(101)
-
 
 class ExitStatus(Enum):
     OK = 101
@@ -759,12 +741,10 @@ class ExitStatus(Enum):
     DOWN = 104
     CHECKER_ERROR = 110
 
-
 def _die(code: ExitStatus, msg: str):
     if msg:
         print(msg, file=sys.stderr)
     exit(code.value)
-
 
 def _main():
     try:
@@ -791,7 +771,6 @@ def _main():
             ExitStatus.CHECKER_ERROR,
             f"Usage: {argv[0]} [check|put|get] IP [flag_id flag vuln]",
         )
-
 
 if __name__ == "__main__":
     _main()
