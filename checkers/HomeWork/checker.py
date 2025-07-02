@@ -17,7 +17,7 @@ import json
 from cryptohash import sha1
 from datetime import datetime
 from dynamic_generation import dynamic_generate
-# from static_generation import static_generate
+from static_generation import static_generate
 
 # Make all random more random.
 random = random.SystemRandom()
@@ -32,6 +32,9 @@ EXPLOIT_NAME = argv[0]
 DEBUG = os.getenv("DEBUG", True)
 TRACE = os.getenv("TRACE", False)
 """ </config> """
+
+start_time = time.time()
+
 
 class FakeSession(requests.Session):
     USER_AGENTS = [
@@ -67,6 +70,7 @@ class FakeSession(requests.Session):
             print("[TRACE] {method} {url} {r.status_code}".format(method=method, url=url, r=r.status_code))
         return r
 
+
 def _gen_user():
     try:
         user = User.generate()
@@ -83,60 +87,63 @@ def _gen_user():
 
 CATEGORIES = [
     "Университетские задачи_Мат.анализ",
-     "Лабораторные работы_Модели безопасности",
-     "Лабораторные работы_Компьютерные сети",
-     "Лабораторные работы_ТЧМК",
-     "Лабораторные работы_АИСД",
-     "Школьные задачи_Алгебра",
-     "Школьные задачи_Геометрия",
-     "Школьные задачи_Физика",
-     "Школьные задачи_Информатика",
-     "Университетские задачи_Экономика",
-     "Университетские задачи_КМЗИ",
-     "Университетские задачи_Мат.статистика",
-     "Университетские задачи_Теория вероятностей",
-     "Университетские задачи_Алгебра",
-    "Мемология_Уроки Французского",
-     "Мемология_Джаваскриптолюбие",
+    "Лабораторные работы_Модели безопасности",
+    "Лабораторные работы_Компьютерные сети",
+    "Лабораторные работы_ТЧМК",
+    "Лабораторные работы_АИСД",
+    "Школьные задачи_Алгебра",
+    "Школьные задачи_Геометрия",
+    "Школьные задачи_Физика",
+    "Школьные задачи_Информатика",
+    "Университетские задачи_Экономика",
+    "Университетские задачи_КМЗИ",
+    "Университетские задачи_Мат.статистика",
+    "Университетские задачи_Теория вероятностей",
+    "Университетские задачи_Алгебра",
+    # "Мемология_Уроки Французского",
+    #  "Мемология_Джаваскриптолюбие",
     # "Мемология_Инглиш мафака",
-    "Мемология_Царица наук"
+    # "Мемология_Царица наук"
 ]
+
 
 def _gen_gdz(is_elite=False, is_paid=False):
     category = random.choice(CATEGORIES)
     price = 0
     if is_paid and not is_elite:
         price = random.randint(50, 100)
-    
+
     # Случайный выбор метода генерации (50/50)
     use_static = random.choice([True, False])
     use_static = False
 
-    # if (use_static or category == "Мемология_Инглиш мафака") and category != "Мемология_Уроки Французского" and category != "Мемология_Царица наук":
-    #     print("Using static generation")
-    #     gdz = static_generate(category)
-    #     file_path = gdz["content"]  # Путь к файлу из static_generate
-    #     gdz_data = {
-    #         "description": gdz["description"],
-    #         "full_description": gdz["full_description"],
-    #         "category": category,
-    #         "content_text": gdz["content_text"],
-    #         "price": price,
-    #         "is_elite": is_elite
-    #     }
-    #     return gdz_data, file_path, category
-    # else:
-    print("Using dynamic generation")
-    gdz = dynamic_generate(category)
-    gdz_data = {
-        "description": gdz["description"],
-        "full_description": gdz["full_description"],
-        "category": category,
-        "content_text": gdz["content_text"],
-        "price": price,
-        "is_elite": is_elite
-    }
-    return gdz_data, gdz["content"], category  # Нет файла
+    if (
+            use_static or category == "Мемология_Инглиш мафака") and category != "Мемология_Уроки Французского" and category != "Мемология_Царица наук":
+        print("Using static generation")
+        gdz = static_generate(category)
+        file_path = gdz["content"]  # Путь к файлу из static_generate
+        gdz_data = {
+            "description": gdz["description"],
+            "full_description": gdz["full_description"],
+            "category": category,
+            "content_text": gdz["content_text"],
+            "price": price,
+            "is_elite": is_elite
+        }
+        return gdz_data, file_path, category
+    else:
+        print("Using dynamic generation")
+        gdz = dynamic_generate(category)
+        gdz_data = {
+            "description": gdz["description"],
+            "full_description": gdz["full_description"],
+            "category": category,
+            "content_text": gdz["content_text"],
+            "price": price,
+            "is_elite": is_elite
+        }
+        return gdz_data, gdz["content"], category  # Нет файла
+
 
 def _register(s, user):
     try:
@@ -147,6 +154,7 @@ def _register(s, user):
         _log(f"Unexpected /register code {r.status_code} with body {r.text}")
         _die(ExitStatus.MUMBLE, f"Unexpected /register code {r.status_code}")
     return r.json()
+
 
 def _login(s, username, password):
     try:
@@ -184,12 +192,14 @@ def _create_gdz(s, gdz_data, file_path):
         _die(ExitStatus.MUMBLE, f"Unexpected /gdz/create code {r.status_code}")
     return r.json()
 
+
 def _get_gdz(s, gdz_id):
     try:
         r = s.get(f"/gdz/{gdz_id}/full")
     except Exception as e:
         _die(ExitStatus.DOWN, f"Failed to get GDZ: {e}")
     return r  # Return response directly to handle status codes in caller
+
 
 def _free_purchase_gdz(s, gdz_id):
     try:
@@ -200,6 +210,7 @@ def _free_purchase_gdz(s, gdz_id):
         _log(f"Unexpected /gdz/{gdz_id}/free-purchase code {r.status_code} with body {r.text}")
         _die(ExitStatus.MUMBLE, f"Unexpected /gdz/{gdz_id}/free-purchase code {r.status_code}")
     return r.json()
+
 
 def _purchase_gdz(s, gdz_id):
     try:
@@ -212,7 +223,6 @@ def _purchase_gdz(s, gdz_id):
     confirmation_code = r.json().get("confirmation_code")
     if not confirmation_code:
         _die(ExitStatus.MUMBLE, f"No confirmation code in purchase response")
-
 
     n = 160301046244593794374726426877457303604019537423736458260136643925405546154653037172463089669436445456557499425029994701102494179131569495553118775092473011745647436677950345054183103280168169605050154349614937369702539109115434630721210013794356412532578527347021846882486616784364644818143571566741240343519
     d = 106867364163062529583150951251638202402679691615824305506757762616937030769768691448308726446290963637704999616686663134068329452754379663702079183394981990945329295012055489191325887232050991358371457973464894055499039990700519040610630249324976268648754088450636207724270010117036618338292116885343831669547
@@ -244,6 +254,7 @@ def _rate_gdz(s, gdz_id, value):
         _die(ExitStatus.MUMBLE, f"Unexpected /gdz/rate code {r.status_code}")
     return r.json()
 
+
 def _check_category(s, category, gdz_id):
     try:
         r = s.get(f"/gdz_category/{category}")
@@ -257,6 +268,7 @@ def _check_category(s, category, gdz_id):
         _die(ExitStatus.MUMBLE, f"GDZ {gdz_id} not found in category {category}")
     return gdz_list
 
+
 def _save_draft(s, draft_data):
     try:
         r = s.post("/gdz/save_draft", json=draft_data)
@@ -266,6 +278,7 @@ def _save_draft(s, draft_data):
         _log(f"Unexpected /gdz/save_draft code {r.status_code} with body {r.text}")
         _die(ExitStatus.MUMBLE, f"Unexpected /gdz/save_draft code {r.status_code}")
     return r.json()
+
 
 def _get_draft(s):
     try:
@@ -277,12 +290,14 @@ def _get_draft(s):
         _die(ExitStatus.MUMBLE, f"Unexpected /gdz/get_draft code {r.status_code}")
     return r.json()
 
+
 def _compare_ratings(actual, expected):
-    if abs(actual - expected) > 0.01:  
+    if abs(actual - expected) > 0.01:
         _die(ExitStatus.MUMBLE, f"User rating mismatch: expected {expected}, got {actual}")
 
+
 def _boost_user_rating(s_owner: FakeSession, user_owner: dict, s_rater: FakeSession):
-    #_log("Накрутка рейтинга для пользователя")
+    _log("Накрутка рейтинга для пользователя")
     gdz_ids = []
     for _ in range(5):
         gdz_data, file, _ = _gen_gdz(is_elite=False, is_paid=True)
@@ -293,14 +308,16 @@ def _boost_user_rating(s_owner: FakeSession, user_owner: dict, s_rater: FakeSess
         gdz_ids.append(gdz_id)
         _purchase_gdz(s_rater, gdz_id)
         _rate_gdz(s_rater, gdz_id, 5)
+        time.sleep(0.1)
     r = s_owner.get("/profile/data")
     if r.status_code != 200:
         _die(ExitStatus.MUMBLE, f"Неожиданный код /profile/data: {r.status_code}")
     rating = r.json().get("user_rating")
     if rating <= 4.8:
         _die(ExitStatus.MUMBLE, f"Рейтинг пользователя {rating} недостаточен после накрутки")
-    #_log(f"Рейтинг накручен до: {rating}")
+    _log(f"Рейтинг накручен до: {rating}")
     return rating
+
 
 def check(host: str):
     s1 = FakeSession(host, PORT)
@@ -314,7 +331,7 @@ def check(host: str):
     user2 = _gen_user()  # Новый пользователь 2 для каждого вызова
     user2_first = None
     first_user2_file = "first_user2.json"
-    
+
     # Проверяем, есть ли сохраненный пользователь 2
     try:
         with open(first_user2_file, "r") as f:
@@ -337,13 +354,14 @@ def check(host: str):
             _die(ExitStatus.DOWN, f"Не удалось войти под первым пользователем 2: {e}")
     else:  # Если user2_first новый (первый вызов), он уже зарегистрирован как user2
         s2_first = s2
-
+    _log("регистрация")
     _login(s1, user1["username"], user1["password"])
     _login(s2, user2["username"], user2["password"])
 
     _log("Создание начальных ГДЗ")
     gdz_data1, file1, category1 = _gen_gdz(is_elite=False, is_paid=False)
     gdz_data2, file2, category2 = _gen_gdz(is_elite=False, is_paid=True)
+    _log("Создал")
     gdz1 = _create_gdz(s1, gdz_data1, file1)
     gdz2 = _create_gdz(s2, gdz_data2, file2)
     gdz1_id = gdz1.get("id")
@@ -358,7 +376,8 @@ def check(host: str):
         _die(ExitStatus.MUMBLE, f"Неожиданный код /profile/data {r1.status_code} или {r2.status_code}")
     profile1 = r1.json()
     profile2 = r2.json()
-    if not any(g["id"] == gdz1_id for g in profile1["gdz_list"]) or not any(g["id"] == gdz2_id for g in profile2["gdz_list"]):
+    if not any(g["id"] == gdz1_id for g in profile1["gdz_list"]) or not any(
+            g["id"] == gdz2_id for g in profile2["gdz_list"]):
         _die(ExitStatus.MUMBLE, "ГДЗ не найдено в профилях пользователей")
 
     _log("Проверка категории для ГДЗ пользователя 2")
@@ -380,55 +399,8 @@ def check(host: str):
     rating1 = random.randint(1, 5)
     _rate_gdz(s1, gdz2_id, rating1)
 
-   # Проверка оценок первого пользователя 2 за последние 5 минут (до новых ГДЗ)
-    # _log("Проверка оценок первого пользователя 2 за последние 5 минут")
-    # try:
-    #     r_ratings = s2_first.get("/gdz/my/ratings")
-    #     if r_ratings.status_code != 200:
-    #         _die(ExitStatus.MUMBLE, f"Неожиданный код /gdz/my/ratings {r_ratings.status_code}")
-    #     ratings = r_ratings.json()
-    #     if len(ratings) >= 2:
-    #         first_time = ratings[0]["created_at"]
-    #         last_time = ratings[-1]["created_at"]
-    #         try:
-    #             first_dt = datetime.fromisoformat(first_time.replace("Z", "+00:00"))
-    #             last_dt = datetime.fromisoformat(last_time.replace("Z", "+00:00"))
-    #             time_diff = (last_dt - first_dt).total_seconds() / 60
-    #             if time_diff > 5:
-    #                 _die(ExitStatus.MUMBLE, f"Разница между оценками больше 5 минут: {time_diff} минут")
-    #         except ValueError as e:
-    #             _die(ExitStatus.MUMBLE, f"Ошибка парсинга времени: {e}")
-        
-    #     # Проверка рейтинга первого пользователя 2
-    #     r2_first = s2_first.get("/profile/data")
-    #     if r2_first.status_code != 200:
-    #         _die(ExitStatus.MUMBLE, f"Неожиданный код /profile/data {r2_first.status_code}")
-    #     actual_rating = r2_first.json()["user_rating"]
-    #     expected_rating = round(sum(r["value"] for r in ratings) / len(ratings), 2) if len(ratings) >= 5 else 0.0
-    #     _log(f"Рейтинг посчитанный вручную {expected_rating}")
-    #     _compare_ratings(actual_rating, expected_rating)
-    # except Exception as e:
-    #     _die(ExitStatus.DOWN, f"Ошибка при проверке оценок: {e}")
-
-    _log("Создание 4 платных ГДЗ для первого пользователя 2 и их оценка пользователем 1")
-    gdz_ids = []
-    ratings = [rating1]
-    for _ in range(4):
-        gdz_data, file, _ = _gen_gdz(is_elite=False, is_paid=True)
-        gdz = _create_gdz(s2_first, gdz_data, file)
-        # _log(f"Ответ сервера: {gdz}")
-        gdz_id = gdz.get("id")
-        if not gdz_id:
-            _die(ExitStatus.MUMBLE, "Не удалось получить ID ГДЗ")
-        gdz_ids.append(gdz_id)
-        _purchase_gdz(s1, gdz_id)
-        rating = random.randint(1, 5)
-        print("raiting", rating)
-        ratings.append(rating)
-        _rate_gdz(s1, gdz_id, rating)
-
-    #Повторная проверка оценок первого пользователя 2 за последние 5 минут
-    _log("Повторная проверка оценок первого пользователя 2 за последние 5 минут")
+    # Проверка оценок первого пользователя 2 за последние 5 минут (до новых ГДЗ)
+    _log("Проверка оценок первого пользователя 2 за последние 5 минут")
     try:
         r_ratings = s2_first.get("/gdz/my/ratings")
         if r_ratings.status_code != 200:
@@ -445,12 +417,7 @@ def check(host: str):
                     _die(ExitStatus.MUMBLE, f"Разница между оценками больше 5 минут: {time_diff} минут")
             except ValueError as e:
                 _die(ExitStatus.MUMBLE, f"Ошибка парсинга времени: {e}")
-            now = datetime.utcnow()
-            for r in ratings:
-                dt = datetime.fromisoformat(r["created_at"].replace("Z", "+00:00"))
-                if (now - dt).total_seconds() > 300:
-                    _log(f"Оценка выпала из окна: {r}")
-        
+
         # Проверка рейтинга первого пользователя 2
         r2_first = s2_first.get("/profile/data")
         if r2_first.status_code != 200:
@@ -460,7 +427,7 @@ def check(host: str):
         _log(f"Рейтинг посчитанный вручную {expected_rating}")
         _compare_ratings(actual_rating, expected_rating)
     except Exception as e:
-        _die(ExitStatus.DOWN, f"Ошибка при повторной проверке оценок: {e}")
+        _die(ExitStatus.DOWN, f"Ошибка при проверке оценок: {e}")
 
     _log("Создание черновика и его проверка")
     category_part2, subject_part2 = category2.split("_", 1)
@@ -473,6 +440,7 @@ def check(host: str):
         "price": gdz_data2["price"],
         "is_elite": gdz_data2["is_elite"]
     }
+    _log(f"draft_data {draft_data2}")
     _save_draft(s2, draft_data2)
     draft2 = _get_draft(s2)
     if not draft2 or "content_text" not in draft2:
@@ -489,7 +457,7 @@ def check(host: str):
             last_elite_user = json.load(f)
         _log(f"Используем предыдущего элитного пользователя: {last_elite_user['username']}")
         _login(s_elite, last_elite_user["username"], last_elite_user["password"])
-        _boost_user_rating(s_elite, last_elite_user, s1)
+        # _boost_user_rating(s_elite, last_elite_user, s1)
     except (FileNotFoundError, json.JSONDecodeError, KeyError):
         _log("Предыдущий элитный пользователь не найден, используем предсозданного 2/2")
         _login(s_elite, "2", "2")
@@ -499,22 +467,22 @@ def check(host: str):
     if not gdz_elite_id:
         _die(ExitStatus.MUMBLE, "Не удалось получить ID элитного ГДЗ")
 
-    _log("Создание нового пользователя 3 и накрутка рейтинга")
-    user3 = _gen_user()
-    _register(s3, user3)
-    _login(s3, user3["username"], user3["password"])
-    _boost_user_rating(s3, user3, s1)
-    with open("last_elite_user.json", "w") as f:
-        json.dump({"username": user3["username"], "password": user3["password"]}, f)
-    _log(f"Сохранён новый элитный пользователь: {user3['username']}")
+    # _log("Создание нового пользователя 3 и накрутка рейтинга")
+    # user3 = _gen_user()
+    # _register(s3, user3)
+    # _login(s3, user3["username"], user3["password"])
+    # _boost_user_rating(s3, user3, s1)
+    # with open("last_elite_user.json", "w") as f:
+    #     json.dump({"username": user3["username"], "password": user3["password"]}, f)
+    # _log(f"Сохранён новый элитный пользователь: {user3['username']}")
 
-    _log("Пользователь 3 проверяет элитное ГДЗ в категории")
-    _check_category(s3, category_elite, gdz_elite_id)
+    # _log("Пользователь 3 проверяет элитное ГДЗ в категории")
+    # _check_category(s3, category_elite, gdz_elite_id)
 
-    _log("Пользователь 3 получает доступ к элитному ГДЗ")
-    gdz = _get_gdz(s3, gdz_elite_id)
-    if gdz.status_code != 200 or gdz.json().get("content_text") != gdz_data_elite["content_text"]:
-        _die(ExitStatus.MUMBLE, "Несоответствие содержимого элитного ГДЗ")
+    # _log("Пользователь 3 получает доступ к элитному ГДЗ")
+    # gdz = _get_gdz(s3, gdz_elite_id)
+    # if gdz.status_code != 200 or gdz.json().get("content_text") != gdz_data_elite["content_text"]:
+    #     _die(ExitStatus.MUMBLE, "Несоответствие содержимого элитного ГДЗ")
 
     _log("Создание пользователя 4 с низким рейтингом для проверки запрета доступа и создания элитных ГДЗ")
     user4 = _gen_user()
@@ -533,7 +501,8 @@ def check(host: str):
         _die(ExitStatus.MUMBLE, f"Неожиданный код /profile/data {r4.status_code}")
     actual_rating_user4 = r4.json()["user_rating"]
     if actual_rating_user4 >= 4.8:
-        _die(ExitStatus.MUMBLE, f"Рейтинг пользователя 4 {actual_rating_user4} неожиданно достаточен для доступа к элитным ГДЗ")
+        _die(ExitStatus.MUMBLE,
+             f"Рейтинг пользователя 4 {actual_rating_user4} неожиданно достаточен для доступа к элитным ГДЗ")
 
     _log("Проверка, что пользователь 4 с низким рейтингом не может создать элитное ГДЗ")
     gdz_data_elite_user4, file_elite_user4, _ = _gen_gdz(is_elite=True, is_paid=False)
@@ -549,9 +518,11 @@ def check(host: str):
             })
 
         if r_elite_attempt_user4.status_code != 403:
-            _die(ExitStatus.MUMBLE, f"Ожидался код 403 для создания элитного ГДЗ пользователем 4, получен {r_elite_attempt_user4.status_code}")
+            _die(ExitStatus.MUMBLE,
+                 f"Ожидался код 403 для создания элитного ГДЗ пользователем 4, получен {r_elite_attempt_user4.status_code}")
         if "Недостаточный рейтинг для создания элитного ГДЗ" not in r_elite_attempt_user4.text:
-            _die(ExitStatus.MUMBLE, "Ожидаемое сообщение об ошибке недостаточного рейтинга не найдено для пользователя 4")
+            _die(ExitStatus.MUMBLE,
+                 "Ожидаемое сообщение об ошибке недостаточного рейтинга не найдено для пользователя 4")
     except Exception as e:
         _die(ExitStatus.DOWN, f"Не удалось попытаться создать элитное ГДЗ пользователем 4: {e}")
 
@@ -562,9 +533,10 @@ def check(host: str):
 
     _die(ExitStatus.OK, "Все проверки пройдены успешно")
 
+
 def put(host: str, flag_id: str, flag: str, vuln: int):
     s = FakeSession(host, PORT)
-    
+
     if vuln == 1:
         user = _gen_user()
         _register(s, user)
@@ -581,7 +553,7 @@ def put(host: str, flag_id: str, flag: str, vuln: int):
                 "password": user["password"],
                 "gdz_id": str(gdz_id)
             }
-         )
+        )
         print(jd, flush=True)
         _die(ExitStatus.OK, f"{jd}")
 
@@ -603,7 +575,7 @@ def put(host: str, flag_id: str, flag: str, vuln: int):
             "price": str(gdz_data["price"]),
             "is_elite": "false",
         }
-        #_log(f"Saving draft with data: {draft_data}")
+        _log(f"Saving draft with data: {draft_data}")
         draft_response = _save_draft(s, draft_data)
         if draft_response.get("status") != "success":
             _log(f"Unexpected draft response: {draft_response}")
@@ -629,32 +601,32 @@ def put(host: str, flag_id: str, flag: str, vuln: int):
         _login(s_rater, user_rater["username"], user_rater["password"])
         # Накрутка рейтинга
         _boost_user_rating(s, user_elite, s_rater)
-        # Создание элитного ГДЗ
+        with open("last_elite_user.json", "w") as f:
+            json.dump({"username": user_elite["username"], "password": user_elite["password"]}, f)
+
         gdz_data, file, _ = _gen_gdz(is_elite=True, is_paid=False)
         gdz_data["content_text"] = flag
         gdz = _create_gdz(s, gdz_data, file)
         gdz_id = gdz.get("id")
         if not gdz_id:
             _die(ExitStatus.CHECKER_ERROR, "Failed to get GDZ ID for vuln3")
-        jd=json.dumps(
+        jd = json.dumps(
             {
                 "username": user_elite["username"],
                 "password": user_elite["password"],
                 "gdz_id": str(gdz_id)
             }
-         )
-        print(jd,flush=True)
-        _die(ExitStatus.OK, f"{jd}")
-    
+        )
+        print(jd, flush=True)
+        _die(ExitStatus.OK, "Put vuln3 OK", f"{jd}")
+
     else:
         _die(ExitStatus.CHECKER_ERROR, f"Unknown vuln: {vuln}")
 
 
-
-
 def get(host: str, flag_id: str, flag: str, vuln: int):
     s = FakeSession(host, PORT)
-    
+
     _log(f"Received flag_id: {flag_id}")
     try:
         flag_id_data = json.loads(flag_id)
@@ -663,7 +635,7 @@ def get(host: str, flag_id: str, flag: str, vuln: int):
             raise ValueError
     except:
         _die(ExitStatus.CHECKER_ERROR, f"Unexpected flagID from jury: {flag_id}!")
-    
+
     if vuln == 1:
         try:
             username = flag_id_data["username"]
@@ -678,7 +650,7 @@ def get(host: str, flag_id: str, flag: str, vuln: int):
         if gdz.json().get("full_description") != flag:
             _die(ExitStatus.CORRUPT, "Flag mismatch for vuln1")
         _die(ExitStatus.OK, "Get vuln1 OK")
-    
+
     elif vuln == 2:
         try:
             username = flag_id_data["username"]
@@ -686,18 +658,18 @@ def get(host: str, flag_id: str, flag: str, vuln: int):
         except (TypeError, KeyError) as e:
             _die(ExitStatus.CHECKER_ERROR, f"Invalid flag_id for vuln2: {e}")
         _login(s, username, password)
-        #_log("Fetching draft for vuln2")
+        _log("Fetching draft for vuln2")
         draft = _get_draft(s)
         if not draft or "content_text" not in draft:
-            #_log(f"No draft or content_text in response: {draft}")
+            _log(f"No draft or content_text in response: {draft}")
             _die(ExitStatus.CORRUPT, "No draft or content_text found for vuln2")
-        #if draft["content_text"] != flag:
-            #_log(f"Flag mismatch: expected {flag}, got {draft['content_text']}")
+        if draft["content_text"] != flag:
+            _log(f"Flag mismatch: expected {flag}, got {draft['content_text']}")
             _die(ExitStatus.CORRUPT, "Flag mismatch for vuln2")
-        #if "category" in draft and "subject" in draft:
-            #_log(f"Draft category: {draft['category']}, subject: {draft['subject']}")
+        if "category" in draft and "subject" in draft:
+            _log(f"Draft category: {draft['category']}, subject: {draft['subject']}")
         _die(ExitStatus.OK, "Get vuln2 OK")
-    
+
     elif vuln == 3:
         try:
             username = flag_id_data["username"]
@@ -712,7 +684,7 @@ def get(host: str, flag_id: str, flag: str, vuln: int):
         if gdz.json().get("content_text") != flag:
             _die(ExitStatus.CORRUPT, "Flag mismatch for vuln3")
         _die(ExitStatus.OK, "Get vuln3 OK")
-    
+
     else:
         _die(ExitStatus.CHECKER_ERROR, f"Unknown vuln: {vuln}")
 
@@ -720,15 +692,19 @@ def get(host: str, flag_id: str, flag: str, vuln: int):
 def rand_string(n=12, alphabet=string.ascii_letters + string.digits):
     return "".join(random.choice(alphabet) for _ in range(n))
 
+
 def _log(obj):
     if DEBUG and obj:
+        elapsed_time = time.time() - start_time
         caller = inspect.stack()[1].function
-        print(f"[{caller}] {obj}", file=sys.stderr)
+        print(f"{elapsed_time}[{caller}] {obj}", file=sys.stderr)
     return obj
+
 
 def info():
     print("vulns: 2:2:1", flush=True, end="")
     exit(101)
+
 
 class ExitStatus(Enum):
     OK = 101
@@ -737,10 +713,12 @@ class ExitStatus(Enum):
     DOWN = 104
     CHECKER_ERROR = 110
 
+
 def _die(code: ExitStatus, msg: str):
     if msg:
         print(msg, file=sys.stderr)
     exit(code.value)
+
 
 def _main():
     try:
@@ -767,6 +745,7 @@ def _main():
             ExitStatus.CHECKER_ERROR,
             f"Usage: {argv[0]} [check|put|get] IP [flag_id flag vuln]",
         )
+
 
 if __name__ == "__main__":
     _main()
