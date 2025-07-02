@@ -31,9 +31,12 @@ const CategoryPage = () => {
         console.log("Токен:", token);
         const headers = { Authorization: `Bearer ${token}` };
 
-        const response = await fetch(`/api/gdz_category/${encodeURIComponent(slug)}`, {
-          headers,
-        });
+        const response = await fetch(
+          `/api/gdz_category/${encodeURIComponent(slug)}`,
+          {
+            headers,
+          }
+        );
 
         if (!response.ok) {
           if (response.status === 401) {
@@ -60,7 +63,14 @@ const CategoryPage = () => {
   }, [slug, navigate]);
 
   const totalPages = Math.ceil(tasks.length / pageSize);
-  console.log("tasks.length:", tasks.length, "pageSize:", pageSize, "totalPages:", totalPages);
+  console.log(
+    "tasks.length:",
+    tasks.length,
+    "pageSize:",
+    pageSize,
+    "totalPages:",
+    totalPages
+  );
   const startIndex = (currentPage - 1) * pageSize;
   const endIndex = startIndex + pageSize;
   const paginatedTasks = tasks.slice(startIndex, endIndex);
@@ -125,17 +135,21 @@ const CategoryPage = () => {
               Назад
             </button>
             <div className="pagination-pages">
-              {Array.from({ length: totalPages }, (_, i) => i + 1).map((page) => (
-                <button
-                  key={page}
-                  onClick={() => goToPage(page)}
-                  className={`pagination-button pagination-page ${currentPage === page ? "active" : ""}`}
-                  aria-label={`Перейти на страницу ${page}`}
-                  aria-current={currentPage === page ? "page" : undefined}
-                >
-                  {page}
-                </button>
-              ))}
+              {Array.from({ length: totalPages }, (_, i) => i + 1).map(
+                (page) => (
+                  <button
+                    key={page}
+                    onClick={() => goToPage(page)}
+                    className={`pagination-button pagination-page ${
+                      currentPage === page ? "active" : ""
+                    }`}
+                    aria-label={`Перейти на страницу ${page}`}
+                    aria-current={currentPage === page ? "page" : undefined}
+                  >
+                    {page}
+                  </button>
+                )
+              )}
             </div>
             <button
               onClick={goToNextPage}
