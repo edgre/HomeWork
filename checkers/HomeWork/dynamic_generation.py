@@ -4,7 +4,7 @@ from math import pi, sqrt, factorial, gcd, log2
 from sympy import symbols, diff, integrate, sin, cos, tan, isprime, mod_inverse
 import os
 import sys
-
+import re
 
 # Базы данных для генерации учебников
 PROBABILITY_BOOKS = [
@@ -89,11 +89,13 @@ NETWORK_SECURITY_BOOKS = [
     ("Network Security Essentials", "William Stallings")
 ]
 
+
 def generate_book(book_list):
     title, author = random.choice(book_list)
     year = random.randint(2000, 2023)
     publisher = random.choice(["Просвещение", "Физматлит", "Высшая школа", "Лань", "Дрофа", "БИНОМ"])
     return f"{title} {author} {publisher}, {year}"
+
 
 def generate_school_algebra_task():
     GRADES = {
@@ -157,10 +159,14 @@ def generate_school_algebra_task():
             a1, b1 = random.randint(1, 5), random.randint(1, 5)
             a2, b2 = random.randint(1, 5), random.randint(1, 5)
             c1, c2 = random.randint(5, 15), random.randint(5, 15)
-            exercise = f"Решите систему:\n{{\n  {a1}x + {b1}y = {c1}\n  {a2}x + {b2}y = {c2}\n}}"
             det = a1 * b2 - a2 * b1
+            while det == 0:  # Повторяем выбор, пока det != 0
+                a1, b1 = random.randint(1, 5), random.randint(1, 5)
+                a2, b2 = random.randint(1, 5), random.randint(1, 5)
+                det = a1 * b2 - a2 * b1
             det_x = c1 * b2 - c2 * b1
             det_y = a1 * c2 - a2 * c1
+            exercise = f"Решите систему:\n{{\n  {a1}x + {b1}y = {c1}\n  {a2}x + {b2}y = {c2}\n}}"
             answer = f"Δ = {det}, Δx = {det_x}, Δy = {det_y}\nx = {det_x / det:.1f}, y = {det_y / det:.1f}"
 
         elif topic == "геометрическая прогрессия":
@@ -184,6 +190,7 @@ def generate_school_algebra_task():
                 answer = f"D = {D}. Решение: {'все x' if a > 0 else 'нет решений'}"
 
     return book, exercise, answer, None
+
 
 def generate_school_geometry_task():
     GRADES = {
@@ -255,6 +262,7 @@ def generate_school_geometry_task():
 
     return book, exercise, answer, None
 
+
 def generate_school_informatics_task():
     GRADES = {
         7: ["информация и её кодирование", "алгоритмы и исполнители", "компьютерные сети"],
@@ -275,7 +283,7 @@ def generate_school_informatics_task():
         elif topic == "алгоритмы и исполнители":
             steps = random.randint(3, 8)
             exercise = f"Составьте алгоритм из {steps} шагов для исполнителя 'Робот', чтобы обойти препятствие."
-            answer = "1. Вперёд 2\n2. Поворот направо\n3. Вперёд 1\n... (пример для {steps} шагов)"
+            answer = "1. Вперёд 2\n 2. Поворот направо\n 3. Вперёд 1\n... (пример для {steps} шагов)"
 
         elif topic == "компьютерные сети":
             speed = random.choice([10, 100, 1000])
@@ -321,6 +329,7 @@ def generate_school_informatics_task():
             answer = f"O(n²) = O({n ** 2}) операций в худшем случае"
 
     return book, exercise, answer, None
+
 
 def generate_school_physics_task():
     GRADES = {
@@ -392,6 +401,7 @@ def generate_school_physics_task():
 
     return book, exercise, answer, None
 
+
 def generate_probability_task():
     topics = ["классическая вероятность", "условная вероятность", "случайные величины"]
     topic = random.choice(topics)
@@ -418,6 +428,7 @@ def generate_probability_task():
         answer = f"M(X) = {sum(xi * pi for xi, pi in zip(x, p)):.2f}"
 
     return book, exercise, answer, None
+
 
 def generate_statistics_task():
     topics = ["описательная статистика", "доверительные интервалы", "проверка гипотез"]
@@ -448,6 +459,7 @@ def generate_statistics_task():
 
     return book, exercise, answer, None
 
+
 def generate_economics_task():
     topics = ["спрос и предложение", "эластичность", "издержки"]
     topic = random.choice(topics)
@@ -474,6 +486,7 @@ def generate_economics_task():
         answer = f"TC = FC + VC*Q = {fc} + {vc}*{q} = {fc + vc * q}"
 
     return book, exercise, answer, None
+
 
 def generate_algebra_task():
     topics = ["линейные уравнения", "квадратные уравнения", "матрицы"]
@@ -505,6 +518,7 @@ def generate_algebra_task():
 
     return book, exercise, answer, None
 
+
 def generate_calculus_task():
     topics = ["производные", "интегралы", "пределы"]
     topic = random.choice(topics)
@@ -530,6 +544,7 @@ def generate_calculus_task():
         answer = "Использовать правило Лопиталя или алгебраические преобразования"
 
     return book, exercise, answer, None
+
 
 def generate_crypto_task():
     topics = [
@@ -558,7 +573,7 @@ def generate_crypto_task():
         e = random.choice([x for x in possible_e if gcd(x, phi) == 1])
         m = random.randint(2, 10)
         exercise = f"""Даны p={p}, q={q}, e={e}. Зашифруйте сообщение m={m} по алгоритму RSA.
-Вычислите n, φ(n), d и зашифрованное сообщение c."""
+    Вычислите n, φ(n), d и зашифрованное сообщение c."""
         d = mod_inverse(e, phi)
         c = pow(m, e, n)
         answer = f"n = {n}, φ(n) = {phi}, d = {d}, c = {m}^{e} mod {n} = {c}"
@@ -567,7 +582,7 @@ def generate_crypto_task():
         values = [random.randint(100, 999) for _ in range(3)]
         mod = random.choice([10, 16, 100])
         exercise = f"""Найдите коллизию для хеш-функции h(x) = x mod {mod}.
-Пример: найти два разных числа с одинаковым хешем."""
+    Пример: найти два разных числа с одинаковым хешем."""
         answer = f"Пример коллизии: {values[0]} mod {mod} = {values[0] % mod}, " + \
                  f"{values[1]} mod {mod} = {values[1] % mod} (при совпадении остатков)"
 
@@ -585,7 +600,7 @@ def generate_crypto_task():
                 break
         m = random.randint(1, 10)
         exercise = f"""Сгенерируйте ЭЦП для сообщения m={m} по схеме ГОСТ Р 34.10-94.
-Даны p={p}, g={g}, закрытый ключ x={x}, k={k}."""
+    Даны p={p}, g={g}, закрытый ключ x={x}, k={k}."""
         r = pow(g, k, p)
         k_inv = mod_inverse(k, p - 1)
         s = (k_inv * (m - x * r)) % (p - 1)
@@ -597,8 +612,8 @@ def generate_crypto_task():
         a = random.randint(2, 10)
         b = random.randint(2, 10)
         exercise = f"""Алиса и Боб используют протокол Диффи-Хеллмана.
-Даны p={p}, g={g}. Алиса выбрала a={a}, Боб выбрал b={b}.
-Вычислите общий секретный ключ."""
+    Даны p={p}, g={g}. Алиса выбрала a={a}, Боб выбрал b={b}.
+    Вычислите общий секретный ключ."""
         A = pow(g, a, p)
         B = pow(g, b, p)
         K_A = pow(B, a, p)
@@ -608,6 +623,7 @@ def generate_crypto_task():
                  f"Общий ключ: {K_A}"
 
     return book, exercise, answer, None
+
 
 def generate_networks_lab_task():
     topics = [
@@ -624,67 +640,68 @@ def generate_networks_lab_task():
         ip = f"192.168.{random.randint(0, 255)}.{random.randint(1, 254)}"
         mask = "255.255.255.0"
         exercise = f"""Настройте локальную сеть между двумя компьютерами:
-1. Задайте IP-адрес: {ip}
-2. Маска подсети: {mask}
-3. Проверьте соединение командой ping"""
+    1. Задайте IP-адрес: {ip}
+    2. Маска подсети: {mask}
+    3. Проверьте соединение командой ping"""
         answer = f"""1. Настройки сети:
-   - IP: {ip}
-   - Маска: {mask}
-2. Проверка:
-   > ping {ip.replace(str(ip.split('.')[-1]), str(int(ip.split('.')[-1]) + 1))}
-   Должны получить ответ от другого компьютера"""
+       - IP: {ip}
+       - Маска: {mask}
+    2. Проверка:
+       > ping {ip.replace(str(ip.split('.')[-1]), str(int(ip.split('.')[-1]) + 1))}
+       Должны получить ответ от другого компьютера"""
 
     elif topic == "Анализ сетевого трафика":
         protocol = random.choice(["HTTP", "DNS", "ICMP"])
         exercise = f"""Захватите и проанализируйте сетевой трафик для протокола {protocol}:
-1. Запустите Wireshark
-2. Настройте фильтр для {protocol}
-3. Определите основные поля пакета"""
+    1. Запустите Wireshark
+    2. Настройте фильтр для {protocol}
+    3. Определите основные поля пакета"""
         answer = f"""Анализ протокола {protocol}:
-1. Основные поля:
-   - {random.choice(['Source/Destination IP', 'Ports', 'Flags', 'Sequence number'])}
-   - {random.choice(['Payload length', 'Checksum', 'Timestamp', 'TTL'])}
-2. Пример пакета: {random.randint(100, 500)} байт"""
+    1. Основные поля:
+       - {random.choice(['Source/Destination IP', 'Ports', 'Flags', 'Sequence number'])}
+       - {random.choice(['Payload length', 'Checksum', 'Timestamp', 'TTL'])}
+    2. Пример пакета: {random.randint(100, 500)} байт"""
 
     elif topic == "Конфигурация маршрутизатора":
         model = random.choice(["Cisco 2900", "TP-Link Archer", "MikroTik RB750"])
         exercise = f"""Настройте маршрутизатор {model}:
-1. Подключитесь через консоль
-2. Настройте NAT
-3. Проверьте работу интернета"""
+    1. Подключитесь через консоль
+    2. Настройте NAT
+    3. Проверьте работу интернета"""
         answer = f"""Настройка {model}:
-1. Команды:
-   - {random.choice(['enable', 'configure terminal', 'interface fastethernet0/0'])}
-   - {random.choice(['ip nat inside', 'ip nat outside', 'access-list 1 permit any'])}
-2. Проверка: ping 8.8.8.8"""
+    1. Команды:
+       - {random.choice(['enable', 'configure terminal', 'interface fastethernet0/0'])}
+       - {random.choice(['ip nat inside', 'ip nat outside', 'access-list 1 permit any'])}
+    2. Проверка: ping 8.8.8.8"""
 
     elif topic == "Исследование протоколов TCP/IP":
         layer = random.randint(1, 4)
         exercise = f"""Исследуйте протоколы {layer}-го уровня модели TCP/IP:
-1. Приведите примеры протоколов
-2. Опишите формат заголовка
-3. Объясните процесс инкапсуляции"""
+    1. Приведите примеры протоколов
+    2. Опишите формат заголовка
+    3. Объясните процесс инкапсуляции"""
         answer = f"""Уровень {layer}:
-1. Протоколы: {random.choice([['HTTP', 'FTP', 'SMTP'], ['TCP', 'UDP'], ['IP', 'ICMP'], ['Ethernet', 'Wi-Fi']][layer - 1])}
-2. Заголовок: содержит поля {random.choice(['адреса', 'флаги', 'контрольные суммы', 'номера портов'])}
-3. Инкапсуляция: данные передаются с верхнего уровня на нижний"""
+    1. Протоколы: {random.choice([['HTTP', 'FTP', 'SMTP'], ['TCP', 'UDP'], ['IP', 'ICMP'], ['Ethernet', 'Wi-Fi']][layer - 1])}
+    2. Заголовок: содержит поля {random.choice(['адреса', 'флаги', 'контрольные суммы', 'номера портов'])}
+    3. Инкапсуляция: данные передаются с верхнего уровня на нижний"""
 
     else:
         lang = random.choice(["Python", "Java", "C++"])
         exercise = f"""Разработайте клиент-серверное приложение на {lang}:
-1. Реализуйте сервер, слушающий порт {random.randint(1024, 9999)}
-2. Создайте клиент для отправки/получения сообщений
-3. Проверьте работу в локальной сети"""
+    1. Реализуйте сервер, слушающий порт {random.randint(1024, 9999)}
+    2. Создайте клиент для отправки/получения сообщений
+    3. Проверьте работу в локальной сети"""
         answer = f"""Пример на {lang}:
-1. Сервер:
-   - {random.choice(['socket()', 'bind()', 'listen()', 'accept()'])}
-2. Клиент:
-   - {random.choice(['connect()', 'send()', 'recv()', 'close()'])}
-3. Тестирование: отправка сообщения 'Hello' и получение ответа"""
+    1. Сервер:
+       - {random.choice(['socket()', 'bind()', 'listen()', 'accept()'])}
+    2. Клиент:
+       - {random.choice(['connect()', 'send()', 'recv()', 'close()'])}
+    3. Тестирование: отправка сообщения 'Hello' и получение ответа"""
 
     book = f"{book}. Лабораторная работа: {topic}"
 
     return book, exercise, answer, None
+
 
 def generate_algorithms_lab_task():
     topics = [
@@ -701,84 +718,85 @@ def generate_algorithms_lab_task():
         algo = random.choice(["пузырьковая", "быстрая", "слиянием"])
         arr = [random.randint(1, 100) for _ in range(5)]
         exercise = f"""Реализуйте {algo} сортировку для массива:
-{arr}
-1. Напишите код на Python
-2. Объясните временную сложность
-3. Проверьте на разных наборах данных"""
+    {arr}
+    1. Напишите код на Python
+    2. Объясните временную сложность
+    3. Проверьте на разных наборах данных"""
         answer = f"""Алгоритм {algo} сортировки:
-1. Код:
-   def {algo}_sort(arr):
-       # Реализация алгоритма
-       return sorted_arr
-2. Сложность: {random.choice(['O(n^2)', 'O(n log n)', 'O(n)'])}
-3. Результат: {sorted(arr)}"""
+    1. Код:
+       def {algo}_sort(arr):
+           # Реализация алгоритма
+           return sorted_arr
+    2. Сложность: {random.choice(['O(n^2)', 'O(n log n)', 'O(n)'])}
+    3. Результат: {sorted(arr)}"""
 
     elif topic == "Поиск в структурах данных":
         struct = random.choice(["хэш-таблица", "бинарное дерево", "связный список"])
         val = random.randint(10, 99)
         exercise = f"""Реализуйте поиск элемента {val} в {struct}:
-1. Создайте структуру данных
-2. Реализуйте алгоритм поиска
-3. Проанализируйте эффективность"""
+    1. Создайте структуру данных
+    2. Реализуйте алгоритм поиска
+    3. Проанализируйте эффективность"""
         code_snippet = f"def search_{struct.replace(' ', '_')}(data, target):\n    # Реализация поиска\n    return found"
         answer = f"""Поиск в {struct}:
-1. {random.choice(['Хэш-функция: key % size', 'Рекурсивный обход', 'Линейный поиск'])}
-2. Код:
-   {code_snippet}
-3. Сложность: {random.choice(['O(1)', 'O(log n)', 'O(n)'])}"""
+    1. {random.choice(['Хэш-функция: key % size', 'Рекурсивный обход', 'Линейный поиск'])}
+    2. Код:
+       {code_snippet}
+    3. Сложность: {random.choice(['O(1)', 'O(log n)', 'O(n)'])}"""
 
     elif topic == "Работа с деревьями":
         tree_type = random.choice(["бинарное", "AVL", "красно-черное"])
         exercise = f"""Работа с {tree_type} деревом:
-1. Реализуйте вставку элемента
-2. Напишите функцию обхода (in-order)
-3. Удалите узел и балансируйте дерево"""
+    1. Реализуйте вставку элемента
+    2. Напишите функцию обхода (in-order)
+    3. Удалите узел и балансируйте дерево"""
         code_snippet = f"""def traverse(node):
-    if node:
-        traverse(node.left)
-        print(node.value)
-        traverse(node.right)"""
+        if node:
+            traverse(node.left)
+            print(node.value)
+            traverse(node.right)"""
         answer = f"""Дерево {tree_type}:
-1. Вставка:
-   - {random.choice(['Сравнение значений', 'Рекурсивный спуск', 'Повороты для балансировки'])}
-2. Обход:
-   {code_snippet}
-3. Балансировка: {random.choice(['Одина roja поворот', 'Двойной поворот', 'Перекрашивание узлов'])}"""
+    1. Вставка:
+       - {random.choice(['Сравнение значений', 'Рекурсивный спуск', 'Повороты для балансировки'])}
+    2. Обход:
+       {code_snippet}
+    3. Балансировка: {random.choice(['Одина roja поворот', 'Двойной поворот', 'Перекрашивание узлов'])}"""
 
     elif topic == "Алгоритмы на графах":
         algo = random.choice(["Дейкстры", "Крускала", "Флойда-Уоршелла"])
         exercise = f"""Реализуйте алгоритм {algo}:
-1. Представьте граф в коде
-2. Напишите алгоритм
-3. Найдите {random.choice(['кратчайший путь', 'минимальное остовное дерево', 'транзитивное замыкание'])}"""
+    1. Представьте граф в коде
+    2. Напишите алгоритм
+    3. Найдите {random.choice(['кратчайший путь', 'минимальное остовное дерево', 'транзитивное замыкание'])}"""
         code_snippet = f"def {algo.lower().replace('-', '_')}(graph):\n    # Реализация алгоритма\n    return result"
         answer = f"""Алгоритм {algo}:
-1. Граф:
-   - {random.choice(['Матрица смежности', 'Список смежности', 'Ребра с весами'])}
-2. Код:
-   {code_snippet}
-3. Результат: {random.choice(['Путь длиной X', 'Дерево с весом Y', 'Матрица достижимости'])}"""
+    1. Граф:
+       - {random.choice(['Матрица смежности', 'Список смежности', 'Ребра с весами'])}
+    2. Код:
+       {code_snippet}
+    3. Результат: {random.choice(['Путь длиной X', 'Дерево с весом Y', 'Матрица достижимости'])}"""
 
     else:
         problem = random.choice(["рюкзак", "наибольшая подпоследовательность", "размен монет"])
         exercise = f"""Решите задачу {problem} методом динамического программирования:
-1. Определите подзадачи
-2. Запишите рекуррентное соотношение
-3. Реализуйте итеративное решение"""
+    1. Определите подзадачи
+    2. Запишите рекуррентное соотношение
+    3. Реализуйте итеративное решение"""
         code_snippet = f"""def {problem.replace(' ', '_')}(items):
-    # Реализация динамического программирования
-    return result"""
+        # Реализация динамического программирования
+        return result"""
         answer = f"""Динамическое программирование ({problem}):
-1. Подзадачи: {random.choice(['частичные суммы', 'префиксы последовательности', 'ограниченная вместимость'])}
-2. Соотношение:
-   - {random.choice(['dp[i] = max(dp[i], dp[i-w] + v)', 'dp[i][j] = dp[i-1][j-1] + 1', 'dp[i] = min(dp[i], dp[i-c] + 1)'])}
-3. Решение:
-   {code_snippet}
-   Сложность: {random.choice(['O(nW)', 'O(n^2)', 'O(nk)'])}"""
+    1. Подзадачи: {random.choice(['частичные суммы', 'префиксы последовательности', 'ограниченная вместимость'])}
+    2. Соотношение:
+       - {random.choice(['dp[i] = max(dp[i], dp[i-w] + v)', 'dp[i][j] = dp[i-1][j-1] + 1', 'dp[i] = min(dp[i], dp[i-c] + 1)'])}
+    3. Решение:
+       {code_snippet}
+       Сложность: {random.choice(['O(nW)', 'O(n^2)', 'O(nk)'])}"""
 
     book = f"{book}. Лабораторная работа: {topic}"
 
     return book, exercise, answer, None
+
 
 def generate_number_theory_lab_task():
     topics = [
@@ -796,17 +814,17 @@ def generate_number_theory_lab_task():
     if topic == "Алгоритм Евклида и расширенный алгоритм Евклида":
         a, b = random.randint(100, 1000), random.randint(100, 1000)
         exercise = f"""1. С помощью алгоритма Евклида вычислите НОД({a}, {b})
-2. Используя расширенный алгоритм Евклида, найдите коэффициенты Безу (x, y) такие, что {a}*x + {b}*y = НОД({a}, {b})"""
+    2. Используя расширенный алгоритм Евклида, найдите коэффициенты Безу (x, y) такие, что {a}*x + {b}*y = НОД({a}, {b})"""
         answer = f"""1. НОД({a}, {b}) = {math.gcd(a, b)}
-2. Коэффициенты Безу: x = [вычисленное значение], y = [вычисленное значение]"""
+    2. Коэффициенты Безу: x = [вычисленное значение], y = [вычисленное значение]"""
 
     elif topic == "Малая теорема Ферма и тест Ферма":
         p = random.choice([17, 19, 23, 29, 31])
         a = random.randint(2, p - 2)
         exercise = f"""1. Проверьте выполнение малой теоремы Ферма для a = {a}, p = {p}
-2. С помощью теста Ферма проверьте числа {p} и {p + 1} на простоту"""
+    2. С помощью теста Ферма проверьте числа {p} и {p + 1} на простоту"""
         answer = f"""1. {a}^({p}-1) mod {p} = [вычисленное значение]
-2. Число {p} - [простое/составное], число {p + 1} - [простое/составное]"""
+    2. Число {p} - [простое/составное], число {p + 1} - [простое/составное]"""
 
     elif topic == "Функция Эйлера и теорема Эйлера":
         n = random.choice([10, 12, 15, 20])
@@ -814,33 +832,33 @@ def generate_number_theory_lab_task():
         while math.gcd(a, n) != 1:
             a = random.randint(2, n - 1)
         exercise = f"""1. Вычислите значение функции Эйлера φ({n})
-2. Проверьте выполнение теоремы Эйлера для a = {a}, n = {n}
-3. Найдите обратный элемент к {a} mod {n}"""
+    2. Проверьте выполнение теоремы Эйлера для a = {a}, n = {n}
+    3. Найдите обратный элемент к {a} mod {n}"""
         answer = f"""1. φ({n}) = [вычисленное значение]
-2. {a}^φ({n}) mod {n} = [вычисленное значение]
-3. Обратный элемент к {a} mod {n} = [вычисленное значение]"""
+    2. {a}^φ({n}) mod {n} = [вычисленное значение]
+    3. Обратный элемент к {a} mod {n} = [вычисленное значение]"""
 
     elif topic == "Китайская теорема об остатках":
         congruences = [(random.randint(2, 10), random.choice([3, 5, 7])) for _ in range(2)]
         exercise = f"""Решите систему сравнений:
-x ≡ {congruences[0][0]} mod {congruences[0][1]}
-x ≡ {congruences[1][0]} mod {congruences[1][1]}
-Найдите наименьшее положительное решение"""
+    x ≡ {congruences[0][0]} mod {congruences[0][1]}
+    x ≡ {congruences[1][0]} mod {congruences[1][1]}
+    Найдите наименьшее положительное решение"""
         answer = f"""Решение: x ≡ [вычисленное значение] mod {congruences[0][1] * congruences[1][1]}"""
 
     elif topic == "Тест Миллера-Рабина на простоту":
         n = random.choice([17, 21, 29, 33, 37])
         exercise = f"""1. С помощью теста Миллера-Рабина проверьте число {n} на простоту
-2. Объясните полученный результат"""
+    2. Объясните полученный результат"""
         answer = f"""1. Число {n} - [вероятно простое/составное]
-2. Вероятность ошибки теста не превышает 25% для одного раунда"""
+    2. Вероятность ошибки теста не превышает 25% для одного раунда"""
 
     elif topic == "Дискретное логарифмирование":
         p = random.choice([7, 11, 13, 17])
         g = random.choice([2, 3, 5])
         a = random.randint(2, p - 2)
         exercise = f"""Решите задачу дискретного логарифмирования:
-Найдите x такое, что {g}^x ≡ {pow(g, a, p)} mod {p}"""
+    Найдите x такое, что {g}^x ≡ {pow(g, a, p)} mod {p}"""
         answer = f"""Решение: x = [вычисленное значение] (проверка: {g}^x mod {p} = {pow(g, a, p)})"""
 
     else:
@@ -853,6 +871,7 @@ x ≡ {congruences[1][0]} mod {congruences[1][1]}
     book = f"{book}. Лабораторная работа: {topic}"
 
     return book, exercise, answer, None
+
 
 def generate_security_models_lab_task():
     topics = [
@@ -874,51 +893,51 @@ def generate_security_models_lab_task():
         subject = "Офицер Иванов"
         obj = "Документ МО-2024"
         exercise = f"""1. Субъект '{subject}' (уровень: {subject_level}) пытается:
-   - Прочитать '{obj}' (уровень: {object_level})
-   - Записать в '{obj}'
-2. Определите, разрешены ли операции"""
+       - Прочитать '{obj}' (уровень: {object_level})
+       - Записать в '{obj}'
+    2. Определите, разрешены ли операции"""
         can_read = levels.index(subject_level) >= levels.index(object_level)
         can_write = levels.index(subject_level) <= levels.index(object_level)
         answer = f"""1. Результат:
-   - Чтение: {'Разрешено' if can_read else 'Запрещено'} (No Read Up)
-   - Запись: {'Разрешено' if can_write else 'Запрещено'} (No Write Down)"""
+       - Чтение: {'Разрешено' if can_read else 'Запрещено'} (No Read Up)
+       - Запись: {'Разрешено' if can_write else 'Запрещено'} (No Write Down)"""
 
     elif topic == "Модель Биба":
         levels = ["критический", "важный", "обычный", "низкий"]
         process_level = random.choice(levels)
         data_level = random.choice(levels)
         exercise = f"""1. Процесс 'Платежная система' (уровень: {process_level}) пытается:
-   - Изменить данные 'Баланс клиента' (уровень: {data_level})
-   - Прочитать журнал операций (уровень: {data_level})
-2. Проверьте допустимость операций"""
+       - Изменить данные 'Баланс клиента' (уровень: {data_level})
+       - Прочитать журнал операций (уровень: {data_level})
+    2. Проверьте допустимость операций"""
         can_write = levels.index(process_level) <= levels.index(data_level)
         can_read = levels.index(process_level) >= levels.index(data_level)
         answer = f"""1. Результат:
-   - Запись: {'Разрешена' if can_write else 'Запрещена'} (No Write Up)
-   - Чтение: {'Разрешено' if can_read else 'Запрещено'} (No Read Down)"""
+       - Запись: {'Разрешена' if can_write else 'Запрещена'} (No Write Up)
+       - Чтение: {'Разрешено' if can_read else 'Запрещено'} (No Read Down)"""
 
     elif topic == "Модель Кларка-Вильсона":
         exercise = """1. Для банковской системы определите:
-   - CDI: Баланс счета, История транзакций
-   - Правило трансформации: Перевод средств (сумма > 0, баланс ≥ суммы)
-   - IVP: Ежедневная сверка балансов"""
+       - CDI: Баланс счета, История транзакций
+       - Правило трансформации: Перевод средств (сумма > 0, баланс ≥ суммы)
+       - IVP: Ежедневная сверка балансов"""
         answer = """1. Пример реализации:
-   - CDI: Баланс счета (целостность), История транзакций (полнота)
-   - Правило: IF сумма > 0 AND баланс_отправителя >= сумма 
-              THEN уменьшить(отправитель, сумма), увеличить(получатель, сумма)
-   - IVP: Сумма всех транзакций за день = Разница балансов"""
+       - CDI: Баланс счета (целостность), История транзакций (полнота)
+       - Правило: IF сумма > 0 AND баланс_отправителя >= сумма 
+                  THEN уменьшить(отправитель, сумма), увеличить(получатель, сумма)
+       - IVP: Сумма всех транзакций за день = Разница балансов"""
 
     elif topic == "Мандатное управление доступом":
         labels = ["TS: NATO", "S: NATO", "C: NATO", "U: PUBLIC"]
         selected = random.sample(labels, 2)
         exercise = f"""1. Может ли субъект с меткой '{selected[0]}':
-   - Прочитать объект с меткой '{selected[1]}'
-   - Записать в объект с меткой '{selected[1]}'"""
+       - Прочитать объект с меткой '{selected[1]}'
+       - Записать в объект с меткой '{selected[1]}'"""
         read_ok = labels.index(selected[0]) >= labels.index(selected[1])
         write_ok = labels.index(selected[0]) <= labels.index(selected[1])
         answer = f"""1. Результат:
-   - Чтение: {'Да' if read_ok else 'Нет'} (доминирует по чтению)
-   - Запись: {'Да' if write_ok else 'Нет'} (доминирует по записи)"""
+       - Чтение: {'Да' if read_ok else 'Нет'} (доминирует по чтению)
+       - Запись: {'Да' if write_ok else 'Нет'} (доминирует по записи)"""
 
     elif topic == "Ролевое управление доступом (RBAC)":
         roles = {
@@ -928,11 +947,11 @@ def generate_security_models_lab_task():
         }
         role = random.choice(list(roles.keys()))
         exercise = f"""1. Для роли '{role}':
-   - Проверьте, может ли она: {random.choice(roles[role])}
-   - Может ли она: {'изменить курс валют' if role != 'Администратор' else 'удалить пользователя'}"""
+       - Проверьте, может ли она: {random.choice(roles[role])}
+       - Может ли она: {'изменить курс валют' if role != 'Администратор' else 'удалить пользователя'}"""
         answer = f"""1. Результат:
-   - Разрешено: {roles[role][0]}
-   - Запрещено: {'изменить курс валют' if role != 'Администратор' else 'удалить пользователя'}"""
+       - Разрешено: {roles[role][0]}
+       - Запрещено: {'изменить курс валют' if role != 'Администратор' else 'удалить пользователя'}"""
 
     elif topic == "Анализ рисков и угроз":
         threats = {
@@ -941,11 +960,11 @@ def generate_security_models_lab_task():
             "Подмена сотрудника": "Низкий"
         }
         exercise = """1. Для системы 'Онлайн-банк':
-   - Основные угрозы: Утечка данных, Отказ в обслуживании
-   - Контрмеры: Шифрование, DDoS-защита"""
+       - Основные угрозы: Утечка данных, Отказ в обслуживании
+       - Контрмеры: Шифрование, DDoS-защита"""
         answer = """1. Оценка рисков:
-   - Утечка данных (риск: Высокий) → Шифрование TLS 1.3
-   - DDoS (риск: Средний) → Cloudflare Protection"""
+       - Утечка данных (риск: Высокий) → Шифрование TLS 1.3
+       - DDoS (риск: Средний) → Cloudflare Protection"""
 
     else:
         matrix = {
@@ -953,16 +972,17 @@ def generate_security_models_lab_task():
             "Пользователь": {"Файл1": "чтение"}
         }
         exercise = """1. Матрица доступа:
-   - Админ → Файл1: чтение, запись
-   - Пользователь → Файл1: чтение
-2. Может ли Пользователь записать в Файл1?"""
+       - Админ → Файл1: чтение, запись
+       - Пользователь → Файл1: чтение
+    2. Может ли Пользователь записать в Файл1?"""
         answer = """1. Проверка:
-   - Админ имеет полный доступ
-   - Пользователь не может записывать в Файл1"""
+       - Админ имеет полный доступ
+       - Пользователь не может записывать в Файл1"""
 
     book = f"{book}. Лабораторная работа: {topic}"
 
     return book, exercise, answer, None
+
 
 def get_base_path():
     """Возвращает абсолютный путь к директории чекера"""
@@ -971,6 +991,7 @@ def get_base_path():
         return os.path.dirname(sys.executable)
     return os.path.dirname(os.path.abspath(__file__))
 
+
 def _gen_gdz_random_image_random_answer_frog():
     # Списки для случайного выбора
     description_options = [
@@ -978,7 +999,7 @@ def _gen_gdz_random_image_random_answer_frog():
         "лягушачьи теории заговора",
         "болотная вечеринка",
         "Жабья инициация",
-        "Сеанс \"Жабьей Правды\"",
+        "Сеанс Жабьей Правды",
         "Болотные Посиделки",
         "театр Лягушачьего Абсурда"
     ]
@@ -1064,13 +1085,11 @@ def _gen_gdz_js(is_elite=False, is_paid=False):
     IMAGES_DIR = os.path.join(BASE_DIR, "Data_for_generations", "js")
     print(IMAGES_DIR)
 
-
     # Выбираем случайный индекс
     random_idx = random.randint(0, len(full_descriptions) - 1)
 
     prefix = "Обычное"
     random_description = f"{prefix} ГДЗ: {random.choice(description_options)}"
-
 
     random_full_description = f"{prefix} ГДЗ: {full_descriptions[random_idx]}"
 
@@ -1102,7 +1121,6 @@ def _gen_memology():
     BASE_DIR = get_base_path()
     # Директории для изображений и цитат
     IMAGES_DIR = os.path.join(BASE_DIR, "Data_for_generations", "just memes images")
-
 
     # Выбор случайного изображения
     try:
@@ -1141,12 +1159,25 @@ CATEGORY_GENERATORS = {
 
 }
 
+
+def clean_string(text: str) -> str:
+    if not isinstance(text, str):
+        return text
+    text = re.sub(r'\\n[0-9]+', '\n', text)  # Удаляем \n1, \n2 и т.д.
+    text = text.replace('\\\n', '\n')  # Исправляем экранированные \n
+    text = re.sub(r'\s+', ' ', text).strip()  # Удаляем лишние пробелы
+    return text
+
+
 def dynamic_generate(category):
     if category not in CATEGORY_GENERATORS:
         raise ValueError(f"Неверная категория: {category}. Доступные категории: {list(CATEGORY_GENERATORS.keys())}")
 
     generator = CATEGORY_GENERATORS[category]
     book, exercise, answer, path = generator()
+    book = clean_string(book)
+    exercise = clean_string(exercise)
+    answer = clean_string(exercise)
     task = {
         "description": book,
         "full_description": exercise,
