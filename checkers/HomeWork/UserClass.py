@@ -3,9 +3,10 @@ import string
 import sys
 import os
 
+
 def get_base_path():
     """Возвращает абсолютный путь к директории чекера"""
-    if getattr(sys, 'frozen', False):
+    if getattr(sys, "frozen", False):
         # Для исполняемых файлов (pyinstaller)
         return os.path.dirname(sys.executable)
     return os.path.dirname(os.path.abspath(__file__))
@@ -25,18 +26,44 @@ class User:
     @staticmethod
     def transliterate(text):
         translit_map = {
-            "а": "a", "б": "b", "в": "v", "г": "g", "д": "d", "е": "e", "Є": "e",
-            "ж": "zh", "з": "z", "и": "i", "й": "y", "к": "k", "л": "l", "м": "m",
-            "н": "n", "о": "o", "п": "p", "р": "r", "с": "s", "т": "t", "у": "u",
-            "ф": "f", "х": "kh", "ц": "ts", "ч": "ch", "ш": "sh", "щ": "shch",
-            "ъ": "", "ы": "y", "ь": "", "э": "e", "ю": "yu", "я": "ya",
+            "а": "a",
+            "б": "b",
+            "в": "v",
+            "г": "g",
+            "д": "d",
+            "е": "e",
+            "Є": "e",
+            "ж": "zh",
+            "з": "z",
+            "и": "i",
+            "й": "y",
+            "к": "k",
+            "л": "l",
+            "м": "m",
+            "н": "n",
+            "о": "o",
+            "п": "p",
+            "р": "r",
+            "с": "s",
+            "т": "t",
+            "у": "u",
+            "ф": "f",
+            "х": "kh",
+            "ц": "ts",
+            "ч": "ch",
+            "ш": "sh",
+            "щ": "shch",
+            "ъ": "",
+            "ы": "y",
+            "ь": "",
+            "э": "e",
+            "ю": "yu",
+            "я": "ya",
         }
         result = ""
         for char in text.lower():
-            result += translit_map.get(char, char)
+            result = str(translit_map.get(char, char))
         return result
-
-
 
     @classmethod
     def generate_username(cls, name, surname):
@@ -58,14 +85,22 @@ class User:
     @classmethod
     def generate(cls):
         BASE_DIR = get_base_path()
-        DATA_DIR = os.path.join(BASE_DIR, 'Data_for_generations')
+        DATA_DIR = os.path.join(BASE_DIR, "Data_for_generations")
 
-# Затем везде, где вы загружаете файлы, используйте:
-        male_names_path = os.path.join(DATA_DIR, 'male_names_rus.txt')
-        male_names = cls.read_words_from_file(os.path.join(DATA_DIR, 'male_names_rus.txt'))
-        male_surnames = cls.read_words_from_file(os.path.join(DATA_DIR, 'male_surnames_rus.txt'))
-        female_names = cls.read_words_from_file(os.path.join(DATA_DIR, 'female_names_rus.txt'))
-        female_surnames = cls.read_words_from_file(os.path.join(DATA_DIR, 'female_surnames_rus.txt'))
+        # Затем везде, где вы загружаете файлы, используйте:
+        male_names_path = os.path.join(DATA_DIR, "male_names_rus.txt")
+        male_names = cls.read_words_from_file(
+            os.path.join(DATA_DIR, "male_names_rus.txt")
+        )
+        male_surnames = cls.read_words_from_file(
+            os.path.join(DATA_DIR, "male_surnames_rus.txt")
+        )
+        female_names = cls.read_words_from_file(
+            os.path.join(DATA_DIR, "female_names_rus.txt")
+        )
+        female_surnames = cls.read_words_from_file(
+            os.path.join(DATA_DIR, "female_surnames_rus.txt")
+        )
 
         gender = random.choice(["male", "female"])
         if gender == "male":
@@ -78,9 +113,13 @@ class User:
         realname = f"{name} {surname}"
         username = cls.generate_username(name, surname)
         password_chars = string.ascii_letters + string.digits
-        password = "".join(random.choice(password_chars) for _ in range(12))  # ƒлина парол¤ 12, как в _gen_user
+        password = "".join(
+            random.choice(password_chars) for _ in range(12)
+        )  # ƒлина парол¤ 12, как в _gen_user
 
         return cls(realname, username, password)
 
     def print_logs(self):
-        print(f"realname: {self.realname}\nusername: {self.username}\npassword: {self.password}")
+        print(
+            f"realname: {self.realname}\nusername: {self.username}\npassword: {self.password}"
+        )
