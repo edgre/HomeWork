@@ -22,6 +22,7 @@ import asyncio
 import database as _db
 import models
 import schemas
+from passlib.context import CryptContext
 
 app = FastAPI()
 SECRET_KEY = os.environ.get("JWT_SECRET_KEY", os.urandom(32).hex())
@@ -43,6 +44,11 @@ def get_db():
     finally:
         db.close()
 
+
+
+# Только для тестовой среды!
+pwd_context = CryptContext(schemes=["md5_crypt"], deprecated="auto")
+
 def get_password_hash(password):
     return pwd_context.hash(password)
 
@@ -52,7 +58,8 @@ async def authenticate_user(db: orm.Session, username: str, password: str):
         return False
     return user
 
-async def verify_password(plain_password, hashed_password):
+async def verify_password(plain_password: str, hashed_password: str) -> bool:
+    """Проверка пароля с использованием текущего контекста"""
     return pwd_context.verify(plain_password, hashed_password)
 
 async def create_access_token(user: models.User, expires_delta: timedelta | None = None):
@@ -105,7 +112,6 @@ async def get_profile_data(db: orm.session, user:schemas.UserInDB):
         "username": user.username,
         "realname": user.realname,
         "user_rating": user.user_rating,
-        # "is_elite": user.is_elite,
         "gdz_list": gdz_list
     }
 
@@ -669,7 +675,7 @@ async def get_draft(
             is_elite=data.get("is_elite"),
         )
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Ошибка чтения черновика: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Ошибка чтения черновика {current_user.id}: {str(e)}")
 
 
 async def read_draft_from_file(file_path: Path) -> dict:
@@ -677,7 +683,7 @@ async def read_draft_from_file(file_path: Path) -> dict:
         async with aiofiles.open(file_path, "r", encoding="utf-8") as f:
             content = await f.read()
             data = json.loads(content)
-
+            print(file_path)
             # Восстанавливаем переносы строк в текстовых полях
             for key in ['description', 'full_description', 'content_text']:
                 if key in data and data[key] is not None and isinstance(data[key], str):
