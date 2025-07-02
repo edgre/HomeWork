@@ -62,7 +62,7 @@ class User:
         }
         result = ""
         for char in text.lower():
-            result = str(translit_map.get(char, char))
+            result += str(translit_map.get(char, char))
         return result
 
     @classmethod
