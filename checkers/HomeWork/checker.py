@@ -332,7 +332,7 @@ def check(host: str):
     user2_first = None
     first_user2_file = "first_user2.json"
 
-    # Проверяем, есть ли сохраненный пользователь 2
+    #  Проверяем, есть ли сохраненный пользователь 2
     try:
         with open(first_user2_file, "r") as f:
             user2_first = json.load(f)
@@ -346,7 +346,7 @@ def check(host: str):
 
     _register(s1, user1)
     _register(s2, user2)
-    # Не регистрируем user2_first повторно, только логинимся, если он уже существует
+    # # Не регистрируем user2_first повторно, только логинимся, если он уже существует
     if user2_first != user2:  # Если user2_first загружен из файла
         try:
             _login(s2_first, user2_first["username"], user2_first["password"])
@@ -402,7 +402,53 @@ def check(host: str):
     # Проверка оценок первого пользователя 2 за последние 5 минут (до новых ГДЗ)
     _log("Проверка оценок первого пользователя 2 за последние 5 минут")
     try:
-        r_ratings = s2_first.get("/gdz/my/ratings")
+        r_ratings = s2.get("/gdz/my/ratings")
+        if r_ratings.status_code != 200:
+            _die(ExitStatus.MUMBLE, f"Неожиданный код /gdz/my/ratings {r_ratings.status_code}")
+        ratings = r_ratings.json()
+        print(ratings)
+        if len(ratings) >= 2:
+            first_time = ratings[0]["created_at"]
+            last_time = ratings[-1]["created_at"]
+            try:
+                first_dt = datetime.fromisoformat(first_time.replace("Z", "+00:00"))
+                last_dt = datetime.fromisoformat(last_time.replace("Z", "+00:00"))
+                time_diff = (last_dt - first_dt).total_seconds() / 60
+                if time_diff > 5:
+                    _die(ExitStatus.MUMBLE, f"Разница между оценками больше 5 минут: {time_diff} минут")
+            except ValueError as e:
+                _die(ExitStatus.MUMBLE, f"Ошибка парсинга времени: {e}")
+
+        # Проверка рейтинга первого пользователя 2
+        r2_first = s2.get("/profile/data")
+        if r2_first.status_code != 200:
+            _die(ExitStatus.MUMBLE, f"Неожиданный код /profile/data {r2_first.status_code}")
+        actual_rating = r2_first.json()["user_rating"]
+        expected_rating = round(sum(r["value"] for r in ratings) / len(ratings), 2) if len(ratings) >= 5 else 0.0
+        _log(f"Рейтинг посчитанный вручную {expected_rating}")
+        _compare_ratings(actual_rating, expected_rating)
+    except Exception as e:
+        _die(ExitStatus.DOWN, f"Ошибка при проверке оценок: {e}")
+
+    _log("Создание 4 платных ГДЗ для первого пользователя 2 и их оценка пользователем 1")
+
+    gdz_ids = []
+    for _ in range(4):
+        gdz_data, file, _ = _gen_gdz(is_elite=False, is_paid=True)
+        gdz = _create_gdz(s2, gdz_data, file)
+        gdz_id = gdz.get("id")
+        if not gdz_id:
+            _die(ExitStatus.MUMBLE, "Не удалось получить ID ГДЗ")
+        gdz_ids.append(gdz_id)
+        _purchase_gdz(s1, gdz_id)
+        rating = random.randint(1, 5)
+        ratings.append(rating)
+        _rate_gdz(s1, gdz_id, rating)
+
+    # Повторная проверка оценок первого пользователя 2 за последние 5 минут
+    _log("Повторная проверка оценок первого пользователя 2 за последние 5 минут")
+    try:
+        r_ratings = s2.get("/gdz/my/ratings")
         if r_ratings.status_code != 200:
             _die(ExitStatus.MUMBLE, f"Неожиданный код /gdz/my/ratings {r_ratings.status_code}")
         ratings = r_ratings.json()
@@ -419,15 +465,15 @@ def check(host: str):
                 _die(ExitStatus.MUMBLE, f"Ошибка парсинга времени: {e}")
 
         # Проверка рейтинга первого пользователя 2
-        r2_first = s2_first.get("/profile/data")
-        if r2_first.status_code != 200:
+        r2 = s2.get("/profile/data")
+        if r2.status_code != 200:
             _die(ExitStatus.MUMBLE, f"Неожиданный код /profile/data {r2_first.status_code}")
-        actual_rating = r2_first.json()["user_rating"]
+        actual_rating = r2.json()["user_rating"]
         expected_rating = round(sum(r["value"] for r in ratings) / len(ratings), 2) if len(ratings) >= 5 else 0.0
         _log(f"Рейтинг посчитанный вручную {expected_rating}")
         _compare_ratings(actual_rating, expected_rating)
     except Exception as e:
-        _die(ExitStatus.DOWN, f"Ошибка при проверке оценок: {e}")
+        _die(ExitStatus.DOWN, f"Ошибка при повторной проверке оценок: {e}")
 
     _log("Создание черновика и его проверка")
     category_part2, subject_part2 = category2.split("_", 1)
@@ -467,22 +513,22 @@ def check(host: str):
     if not gdz_elite_id:
         _die(ExitStatus.MUMBLE, "Не удалось получить ID элитного ГДЗ")
 
-    # _log("Создание нового пользователя 3 и накрутка рейтинга")
-    # user3 = _gen_user()
-    # _register(s3, user3)
-    # _login(s3, user3["username"], user3["password"])
-    # _boost_user_rating(s3, user3, s1)
-    # with open("last_elite_user.json", "w") as f:
-    #     json.dump({"username": user3["username"], "password": user3["password"]}, f)
-    # _log(f"Сохранён новый элитный пользователь: {user3['username']}")
+    _log("Создание нового пользователя 3 и накрутка рейтинга")
+    user3 = _gen_user()
+    _register(s3, user3)
+    _login(s3, user3["username"], user3["password"])
+    _boost_user_rating(s3, user3, s1)
+    with open("last_elite_user.json", "w") as f:
+        json.dump({"username": user3["username"], "password": user3["password"]}, f)
+    _log(f"Сохранён новый элитный пользователь: {user3['username']}")
 
-    # _log("Пользователь 3 проверяет элитное ГДЗ в категории")
-    # _check_category(s3, category_elite, gdz_elite_id)
+    _log("Пользователь 3 проверяет элитное ГДЗ в категории")
+    _check_category(s3, category_elite, gdz_elite_id)
 
-    # _log("Пользователь 3 получает доступ к элитному ГДЗ")
-    # gdz = _get_gdz(s3, gdz_elite_id)
-    # if gdz.status_code != 200 or gdz.json().get("content_text") != gdz_data_elite["content_text"]:
-    #     _die(ExitStatus.MUMBLE, "Несоответствие содержимого элитного ГДЗ")
+    _log("Пользователь 3 получает доступ к элитному ГДЗ")
+    gdz = _get_gdz(s3, gdz_elite_id)
+    if gdz.status_code != 200 or gdz.json().get("content_text") != gdz_data_elite["content_text"]:
+        _die(ExitStatus.MUMBLE, "Несоответствие содержимого элитного ГДЗ")
 
     _log("Создание пользователя 4 с низким рейтингом для проверки запрета доступа и создания элитных ГДЗ")
     user4 = _gen_user()
