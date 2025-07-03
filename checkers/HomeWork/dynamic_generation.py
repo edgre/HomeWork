@@ -1083,7 +1083,6 @@ def _gen_gdz_js(is_elite=False, is_paid=False):
     BASE_DIR = get_base_path()
     # Директории для изображений
     IMAGES_DIR = os.path.join(BASE_DIR, "Data_for_generations", "js")
-    print(IMAGES_DIR)
 
     # Выбираем случайный индекс
     random_idx = random.randint(0, len(full_descriptions) - 1)

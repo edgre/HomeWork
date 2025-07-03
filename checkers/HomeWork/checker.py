@@ -105,7 +105,7 @@ CATEGORIES = [
     "Университетские задачи_Теория вероятностей",
     "Университетские задачи_Алгебра",
     "Мемология_Уроки Французского",
-     "Мемология_Джаваскриптолюбие",
+    "Мемология_Джаваскриптолюбие",
     "Мемология_Инглиш мафака",
     "Мемология_Царица наук"
 ]
@@ -123,6 +123,7 @@ def _gen_gdz(is_elite=False, is_paid=False):
         (use_static or category == "Мемология_Инглиш мафака")
         and category != "Мемология_Уроки Французского"
         and category != "Мемология_Царица наук"
+        and category != "Мемология_Джаваскриптолюбие"
     ):
         # print("Using static generation")
         gdz = static_generate(category)
@@ -458,6 +459,7 @@ def check(host: str):
     rating1 = random.randint(1, 5)
     _rate_gdz(s1, gdz2_id, rating1)
 
+
     # Проверка оценок первого пользователя 2 за последние 5 минут (до новых ГДЗ)
     _log(
         "Checking stars that first_user2 put for 5 minutes..."  # "Проверка оценок первого пользователя 2 за последние 5 минут"
@@ -549,6 +551,7 @@ def check(host: str):
                     )
             except ValueError as e:
                 _die(ExitStatus.MUMBLE, f"Time parcing error: {e}")
+
 
         # Проверка рейтинга первого пользователя 2
         r2 = s2.get("/profile/data")
@@ -658,6 +661,7 @@ def check(host: str):
     _purchase_gdz(s1, gdz4_id)
     _rate_gdz(s1, gdz4_id, 1)
 
+
     r4 = s4.get("/profile/data")
     if r4.status_code != 200:
         _die(ExitStatus.MUMBLE, f"Unexpected code /profile/data {r4.status_code}")
@@ -696,7 +700,7 @@ def check(host: str):
                 ExitStatus.MUMBLE,
                 f"Expected code 403 for creating elite GDZ by user4, got: {r_elite_attempt_user4.status_code}",
             )
-        if "Not enough rating to create elite GDZ" not in r_elite_attempt_user4.text:
+        if "Недостаточный рейтинг для создания элитного ГДЗ" not in r_elite_attempt_user4.text:
             _die(
                 ExitStatus.MUMBLE,
                 "Expected message of an [not enough rating..] error not found for user4",
@@ -868,17 +872,13 @@ def get(host: str, flag_id: str, flag: str, vuln: int):
         except (TypeError, KeyError) as e:
             _die(ExitStatus.CHECKER_ERROR, f"Invalid flag_id for vuln2: {e}")
         _login(s, username, password)
-        _log("Fetching draft for vuln2")
         draft = _get_draft(s)
         if not draft or "content_text" not in draft:
-            _log(f"No draft or content_text in response: {draft}")
             _die(ExitStatus.CORRUPT, "No draft or content_text found for vuln2")
         if draft["content_text"] != flag:
-            _log(f"Flag mismatch: expected {flag}, got {draft['content_text']}")
             _die(ExitStatus.CORRUPT, "Flag mismatch for vuln2")
         if "category" in draft and "subject" in draft:
-            _log(f"Draft category: {draft['category']}, subject: {draft['subject']}")
-        _die(ExitStatus.OK, "Get vuln2 OK")
+            _die(ExitStatus.OK, "Get vuln2 OK")
 
     elif vuln == 3:
         try:
