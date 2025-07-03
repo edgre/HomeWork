@@ -356,6 +356,9 @@ def check(host: str):
     s3 = FakeSession(host, PORT)
     s4 = FakeSession(host, PORT)
 
+    user1 = None
+    user2 = None
+
     # Регистрация и вход пользователей
     while user1 == None or user2 == None:
         user1 = _gen_user()
@@ -616,6 +619,7 @@ def check(host: str):
 
     _log("Creating new user3 and trying boost rating...")
 
+    user3 = None
     while user3 == None:
         user3 = _gen_user()
 
@@ -644,6 +648,7 @@ def check(host: str):
     # Создание пользователя 4 с низким рейтингом для проверки запрета доступа и создания элитных ГДЗ
     _log("Creating user4 with low rating for checking access to elite GDZ...")
 
+    user4 = None
     while user4 == None:
         user4 = _gen_user()
 
@@ -727,6 +732,7 @@ def put(host: str, flag_id: str, flag: str, vuln: int):
     if vuln == 1:
         _log(f"vuln {vuln} started...")
 
+        user = None
         while user == None:
             user = _gen_user()
 
@@ -752,6 +758,7 @@ def put(host: str, flag_id: str, flag: str, vuln: int):
     elif vuln == 2:
         _log(f"vuln {vuln} started...")
 
+        user = None
         while user == None:
             user = _gen_user()
 
@@ -785,6 +792,7 @@ def put(host: str, flag_id: str, flag: str, vuln: int):
         _log(f"vuln {vuln} started...")
 
         # Создание нового пользователя
+        user_elite = None
         while user_elite == None:
             user_elite = _gen_user()
 
@@ -793,6 +801,7 @@ def put(host: str, flag_id: str, flag: str, vuln: int):
 
         # Создание второго пользователя для накрутки рейтинга
         s_rater = FakeSession(host, PORT)
+        user_rater = None
         while user_rater == None:
             user_rater = _gen_user()
 
