@@ -629,7 +629,7 @@ async def save_draft_to_file(draft_content: Dict[str, Any], file_path: Path) -> 
         elif isinstance(value, (int, float)) or key in ["id", "owner_id", "price"]:
             template_lines.append(f'    "{key}": {{{{ {key} }}}},')
         else:
-            template_lines.append(f'    "{key}": "{{{{ {key} }}}}",')
+            template_lines.append(f'    "{key}": "{value}",')
 
     template_lines[-1] = template_lines[-1].rstrip(',')
     template_string = '{\n' + '\n'.join(template_lines) + '\n}'

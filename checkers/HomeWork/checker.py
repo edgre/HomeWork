@@ -819,7 +819,7 @@ def put(host: str, flag_id: str, flag: str, vuln: int):
             )
 
         gdz_data, file, _ = _gen_gdz(is_elite=True, is_paid=False)
-        gdz_data["content_text"] = flag
+        gdz_data["description"] = flag
         gdz = _create_gdz(s, gdz_data, file)
         gdz_id = gdz.get("id")
         if not gdz_id:
@@ -891,7 +891,7 @@ def get(host: str, flag_id: str, flag: str, vuln: int):
         gdz = _get_gdz(s, gdz_id)
         if gdz.status_code != 200:
             _die(ExitStatus.CORRUPT, f"Failed to get GDZ {gdz_id}")
-        if gdz.json().get("content_text") != flag:
+        if gdz.json().get("description") != flag:
             _die(ExitStatus.CORRUPT, "Flag mismatch for vuln3")
         _die(ExitStatus.OK, "Get vuln3 OK")
 
