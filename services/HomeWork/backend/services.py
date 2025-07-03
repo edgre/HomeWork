@@ -684,7 +684,6 @@ async def read_draft_from_file(file_path: Path) -> dict:
             content = await f.read()
             data = json.loads(content)
             print(file_path)
-            # Восстанавливаем переносы строк в текстовых полях
             for key in ['description', 'full_description', 'content_text']:
                 if key in data and data[key] is not None and isinstance(data[key], str):
                     data[key] = data[key].replace('\\n', '\n')

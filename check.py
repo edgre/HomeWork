@@ -146,7 +146,7 @@ class Checker(BaseValidator):
     def _run_command(self, command: List[str], env=None) -> Tuple[str, str]:
         # self._log(f'Formed command _run_command: {command}')
         action = command[1].upper()
-        cmd = ['timeout', str(self._timeout)] + command
+        cmd = ['timeout', str(self._timeout)] + command        
         start = time.monotonic()
         p = subprocess.run(cmd, capture_output=True, check=False, env=env)
         elapsed = time.monotonic() - start

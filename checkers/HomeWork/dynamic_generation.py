@@ -1,7 +1,7 @@
 import random
 import math
-from math import pi, sqrt, factorial, gcd, log2
-from sympy import symbols, diff, integrate, sin, cos, tan, isprime, mod_inverse
+from math import pi,sqrt,  gcd, log2
+from sympy import symbols, diff, integrate, mod_inverse
 import os
 import sys
 import re

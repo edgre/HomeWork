@@ -104,10 +104,10 @@ CATEGORIES = [
     "Университетские задачи_Мат.статистика",
     "Университетские задачи_Теория вероятностей",
     "Университетские задачи_Алгебра",
-    # "Мемология_Уроки Французского",
-    #  "Мемология_Джаваскриптолюбие",
-    # "Мемология_Инглиш мафака",
-    # "Мемология_Царица наук"
+    "Мемология_Уроки Французского",
+     "Мемология_Джаваскриптолюбие",
+    "Мемология_Инглиш мафака",
+    "Мемология_Царица наук"
 ]
 
 
@@ -117,9 +117,7 @@ def _gen_gdz(is_elite=False, is_paid=False):
     if is_paid and not is_elite:
         price = random.randint(50, 100)
 
-    # Случайный выбор метода генерации (50/50)
     use_static = random.choice([True, False])
-    use_static = False
 
     if (
         (use_static or category == "Мемология_Инглиш мафака")
@@ -128,7 +126,7 @@ def _gen_gdz(is_elite=False, is_paid=False):
     ):
         # print("Using static generation")
         gdz = static_generate(category)
-        file_path = gdz["content"]  # Путь к файлу из static_generate
+        file_path = gdz["content"]
         gdz_data = {
             "description": gdz["description"],
             "full_description": gdz["full_description"],
@@ -184,8 +182,8 @@ def _create_gdz(s, gdz_data, file_path):
         if file_path is not None:
             try:
                 with open(file_path, "rb") as f:
-                    file_content = f.read()  # Читаем содержимое файла в память
-                files["content_file"] = ("solution.png", file_content, "image/png")  # type: ignore
+                    file_content = f.read()
+                files["content_file"] = ("solution.png", file_content, "image/png")
             except FileNotFoundError as e:
                 _die(ExitStatus.MUMBLE, f"File not found: {file_path}")
 
@@ -203,7 +201,7 @@ def _get_gdz(s, gdz_id):
         r = s.get(f"/gdz/{gdz_id}/full")
     except Exception as e:
         _die(ExitStatus.DOWN, f"Failed to get GDZ: {e}")
-    return r  # Return response directly to handle status codes in caller
+    return r
 
 
 def _free_purchase_gdz(s, gdz_id):
@@ -242,7 +240,6 @@ def _purchase_gdz(s, gdz_id):
     d = 106867364163062529583150951251638202402679691615824305506757762616937030769768691448308726446290963637704999616686663134068329452754379663702079183394981990945329295012055489191325887232050991358371457973464894055499039990700519040610630249324976268648754088450636207724270010117036618338292116885343831669547
 
     h = bytes.fromhex(sha1(confirmation_code))
-    # Формируем паддинг: 00 01 FF...FF (15 байт) 00 HASH
     padding = b"\x00\x01" + b"\xff" * 105 + b"\x00" + h
     # Преобразуем блок в число
     m = int.from_bytes(padding, "big")
@@ -359,16 +356,15 @@ def check(host: str):
     user1 = None
     user2 = None
 
-    # Регистрация и вход пользователей
     while user1 == None or user2 == None:
         user1 = _gen_user()
-        user2 = _gen_user()  # Новый пользователь 2 для каждого вызова
+        user2 = _gen_user()
         _log("check: trying to gen user1, user2")
 
     user2_first = None
     first_user2_file = "first_user2.json"
 
-    #  Проверяем, есть ли сохраненный пользователь 2
+
     try:
         with open(first_user2_file, "r") as f:
             user2_first = json.load(f)
@@ -385,7 +381,7 @@ def check(host: str):
     _log("Registration of user1, user2:")
     _register(s1, user1)
     _register(s2, user2)
-    # # Не регистрируем user2_first повторно, только логинимся, если он уже существует
+    # Не регистрируем user2_first повторно, только логинимся, если он уже существует
     if user2_first != user2:  # Если user2_first загружен из файла
         try:
             _login(s2_first, user2_first["username"], user2_first["password"])
@@ -474,7 +470,6 @@ def check(host: str):
                 f"Unexpected code /gdz/my/ratings {r_ratings.status_code}",
             )
         ratings = r_ratings.json()
-        # print(ratings)
         if len(ratings) >= 2:
             first_time = ratings[0]["created_at"]
             last_time = ratings[-1]["created_at"]
