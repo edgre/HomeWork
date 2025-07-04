@@ -32,10 +32,12 @@ ACCESS_TOKEN_EXPIRE_MINUTES = 30
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/token")
 
+
 async def add_to_db(db: orm.Session(), class_obj):
     db.add(class_obj)
     db.commit()
     db.refresh(class_obj)
+
 
 def get_db():
     db = _db.Session()
@@ -45,12 +47,12 @@ def get_db():
         db.close()
 
 
-
-# Только для тестовой среды!
 pwd_context = CryptContext(schemes=["md5_crypt"], deprecated="auto")
+
 
 def get_password_hash(password):
     return pwd_context.hash(password)
+
 
 async def authenticate_user(db: orm.Session, username: str, password: str):
     user = await get_user(db, username)
@@ -58,9 +60,11 @@ async def authenticate_user(db: orm.Session, username: str, password: str):
         return False
     return user
 
+
 async def verify_password(plain_password: str, hashed_password: str) -> bool:
     """Проверка пароля с использованием текущего контекста"""
     return pwd_context.verify(plain_password, hashed_password)
+
 
 async def create_access_token(user: models.User, expires_delta: timedelta | None = None):
     user_obj = schemas.UserInDB.from_orm(user)
@@ -70,9 +74,10 @@ async def create_access_token(user: models.User, expires_delta: timedelta | None
     token = jwt.encode(payload, SECRET_KEY, algorithm="HS256")
     return {"access_token": token}
 
+
 async def get_current_user(
-    db: orm.Session = Depends(get_db),
-    token: str = Depends(oauth2_scheme),
+        db: orm.Session = Depends(get_db),
+        token: str = Depends(oauth2_scheme),
 ):
     try:
         payload = jwt.decode(token, SECRET_KEY, algorithms=["HS256"])
@@ -82,10 +87,12 @@ async def get_current_user(
             status_code=401, detail="Invalid JWT token")
     return schemas.UserInDB.from_orm(user)
 
-async def get_user (db: orm.Session(), username: str):
-   return db.query(models.User).filter(models.User.username == username).first()
 
-async def get_profile_data(db: orm.session, user:schemas.UserInDB):
+async def get_user(db: orm.Session(), username: str):
+    return db.query(models.User).filter(models.User.username == username).first()
+
+
+async def get_profile_data(db: orm.session, user: schemas.UserInDB):
     user = db.query(models.User).filter(models.User.id == user.id).first()
     if not user:
         raise HTTPException(status_code=404, detail="User not found")
@@ -135,13 +142,13 @@ async def get_subjects_by_category(db: orm.Session(), category: str):
     ).filter(
         models.Subjects.category == category
     ).all()
-    return [ subject.subject_name for subject in subjects]
+    return [subject.subject_name for subject in subjects]
 
 
 async def save_uploaded_file(file: UploadFile, upload_dir: str = "media") -> str:
     Path(upload_dir).mkdir(parents=True, exist_ok=True)
     file_ext = file.filename.split('.')[-1] if '.' in file.filename else 'png'
-    if file_ext in ['png', 'jpg', 'jpeg']:  # Можно расширить список допустимых форматов
+    if file_ext in ['png', 'jpg', 'jpeg']:
 
         filename = f"{uuid4()}.{file_ext}"
         filepath = os.path.join(upload_dir, filename)
@@ -152,13 +159,12 @@ async def save_uploaded_file(file: UploadFile, upload_dir: str = "media") -> str
         except Exception as e:
             raise HTTPException(500, detail=f"Ошибка при сохранении файла: {str(e)}")
         path = f'/api/images/{filename}'
-        #print(path)
         return path
 
+
 async def get_image(
-    name: str
+        name: str
 ):
-    #print(name)
     return FileResponse(f"media/{name}", headers={"Cache-Control": "no-cache"})
 
 
@@ -171,7 +177,6 @@ async def create_gdz(
     try:
         gdz_data = schemas.GDZCreate.model_validate_json(gdz_str)
     except ValueError as e:
-        #print(f"Ошибка валидации: {e}")
         raise
     try:
         user = db.query(models.User).filter_by(id=owner_id).first()
@@ -192,7 +197,7 @@ async def create_gdz(
             content=filename,
             content_text=gdz_data.content_text,
             price=gdz_data.price,
-            is_elite =gdz_data.is_elite
+            is_elite=gdz_data.is_elite
         )
 
         db.add(gdz)
@@ -203,7 +208,7 @@ async def create_gdz(
         if user.has_draft:
             await cleanup_draft(db, owner_id)
 
-        # asyncio.create_task(cleanup_old_gdz(db))
+        asyncio.create_task(cleanup_old_gdz(db))
         return gdz
 
     except HTTPException:
@@ -219,39 +224,18 @@ async def get_gdz_by_id(
     return db.query(models.GDZ).filter(models.GDZ.id == gdz_id).first()
 
 
-# async def get_all_gdz_sorted_by_rating(db: orm.Session, descending: bool = True):
-#     stmt = select(models.GDZ).where(models.GDZ.rating.is_not(None))
-#
-#     if descending:
-#         stmt = stmt.order_by(models.GDZ.rating.desc())
-#     else:
-#         stmt = stmt.order_by(models.GDZ.rating.asc())
-#
-#     result = await db.execute(stmt)
-#     return result.scalars().all()
-
-
 async def get_gdz_by_owner(db: orm.Session, user_id: int):
     return db.query(models.GDZ).filter(models.GDZ.owner_id == user_id).all()
+
 
 async def is_gdz_free(db: orm.Session, gdz_id: int):
     gdz = await get_gdz_by_id(db, gdz_id)
     return gdz and gdz.price == 0
 
 
-# async def get_user_purchases(db: orm.Session, user_id: int):
-#     stmt = (
-#         select(models.GDZ)  # Выбираем GDZ, а не Purchase
-#         .join(models.Purchase, models.Purchase.gdz_id == models.GDZ.id)  # Соединяем с Purchase
-#         .where(models.Purchase.buyer_id == user_id)  # Только покупки текущего пользователя
-#     )
-#     result = db.execute(stmt)
-#     return result.scalars().all()  # Возвращаем GDZ, а не Purchase
-
 async def get_gdz_by_category(category: str, current_user: schemas.UserInDB, db: orm.Session):
     query = db.query(models.GDZ).filter(models.GDZ.category == category)
     if current_user.user_rating is None or current_user.user_rating < 4.8:
-        #print(current_user.user_rating)
         query = query.filter(
             or_(
                 models.GDZ.is_elite == False,
@@ -271,7 +255,6 @@ async def get_gdz_by_category(category: str, current_user: schemas.UserInDB, db:
         }
         for task in tasks
     ]
-    #print(res)
     return res
 
 
@@ -296,7 +279,7 @@ async def get_gdz_full(
 
     enforce_elite_access(db, gdz, current_user)
 
-    is_free = gdz.price==0
+    is_free = gdz.price == 0
     is_owner = gdz.owner_id == current_user.id
     has_purchased = await get_purchase(db, current_user.id, gdz_id) is not None
 
@@ -307,6 +290,7 @@ async def get_gdz_full(
         )
 
     return gdz
+
 
 async def free_purchase(
         gdz_id: int,
@@ -335,6 +319,7 @@ async def free_purchase(
     db.refresh(purchase)
 
     return {"message": "Запись о покупке создана"}
+
 
 async def purchase_gdz(
         gdz_id: int,
@@ -379,8 +364,9 @@ async def purchase_gdz(
         "confirmation_code": str(confirmation_code),
     }
 
+
 async def create_code():
-    return(secrets.randbelow(2**60))
+    return (secrets.randbelow(2 ** 60))
 
 
 async def validate_signature(
@@ -403,7 +389,6 @@ async def validate_signature(
         .where(models.Codes.user_id == user_id)
         .where(models.Codes.gdz_id == gdz_id)
     ).scalar()
-    #print(m.group(1), bytes.fromhex(sha1(code)))
     if not m:
         return False
     if m.group(1) != bytes.fromhex(sha1(code)):
@@ -427,7 +412,7 @@ async def confirm_purchase(
     is_free = await is_gdz_free(db, gdz_id)
     if is_free:
         raise HTTPException(status_code=400, detail="Бесплатное ГДЗ не требует покупки")
-    if await validate_signature (db, current_user.id, gdz_id, signature.value):
+    if await validate_signature(db, current_user.id, gdz_id, signature.value):
 
         purchase = models.Purchase(
             buyer_id=current_user.id,
@@ -437,8 +422,6 @@ async def confirm_purchase(
         db.add(purchase)
         db.commit()
         db.refresh(purchase)
-
-        #print("добавлено")
         return {"message": "Покупка подтверждена", "gdz_id": gdz_id}
     else:
         raise HTTPException(status_code=400, detail="Введено неверное значение")
@@ -449,7 +432,6 @@ async def rate_gdz(
         db: orm.Session,
         current_user: schemas.UserInDB
 ):
-    # Получаем ГДЗ со связью с владельцем
     gdz = (
         db.query(models.GDZ)
         .options(orm.joinedload(models.GDZ.user))
@@ -461,7 +443,6 @@ async def rate_gdz(
 
     enforce_elite_access(db, gdz, current_user)
 
-    # Проверяем, что пользователь не владелец
     if gdz.owner_id == current_user.id:
         raise HTTPException(
             status_code=400,
@@ -475,7 +456,6 @@ async def rate_gdz(
             detail="Нельзя оценить ГДЗ без покупки"
         )
 
-    # Проверяем, не оценивал ли уже пользователь это ГДЗ
     existing_rating = (
         db.query(models.GDZRating)
         .filter_by(
@@ -491,7 +471,6 @@ async def rate_gdz(
             detail="Вы уже оценивали это ГДЗ"
         )
 
-    # Создаем оценку
     new_rating = models.GDZRating(
         gdz_id=rating.gdz_id,
         user_id=current_user.id,
@@ -501,7 +480,6 @@ async def rate_gdz(
     db.add(new_rating)
     db.commit()
 
-    # Обновляем рейтинг автора ГДЗ
     update_user_rating(db, gdz.owner_id)
 
     return {
@@ -534,9 +512,9 @@ def update_user_rating(db: orm.Session, owner_id: int):
 
     db.commit()
 
+
 def enforce_elite_access(db: orm.Session, gdz, user):
-    # Обновляем рейтинг пользователя перед проверкой
-    
+
     update_user_rating(db, user.id)
     if gdz.is_elite and gdz.owner_id != user.id:
         if user.user_rating is None or user.user_rating < 4.8:
@@ -544,14 +522,16 @@ def enforce_elite_access(db: orm.Session, gdz, user):
                 status_code=403,
                 detail="Недостаточный рейтинг для доступа к элитному ГДЗ"
             )
+
+
 DRAFTS_DIR = Path("drafts")
 env = Environment(autoescape=False)
 
 
 async def save_draft(
-    db: orm.Session,
-    current_user: schemas.UserInDB,
-    data: Dict[str, Any] = Body(...)
+        db: orm.Session,
+        current_user: schemas.UserInDB,
+        data: Dict[str, Any] = Body(...)
 ):
     try:
         draft_data = {
@@ -560,7 +540,7 @@ async def save_draft(
             "category": data["category"],
             "subject": data.get("subject"),
             "content_text": data.get("content_text"),
-            "price": data.get("price"),  # Может быть None
+            "price": data.get("price"),
             "is_elite": data.get("is_elite"),
             "gdz_id": data.get("gdz_id")
         }
@@ -578,9 +558,9 @@ async def save_draft(
 
 
 async def create_or_update_draft(
-    db: orm.Session,
-    owner_id: int,
-    data: Dict[str, Any] = Body(...),
+        db: orm.Session,
+        owner_id: int,
+        data: Dict[str, Any] = Body(...),
 ) -> None:
     try:
         user = db.query(models.User).filter_by(id=owner_id).first()
@@ -601,7 +581,7 @@ async def create_or_update_draft(
             "category": data.get("category", ""),
             "subject": data.get("subject", ""),
             "content_text": data.get("content_text", ""),
-            "price": data.get("price"),  # Сохраняем как есть (может быть None)
+            "price": data.get("price"),
             "is_elite": data.get("is_elite", False),
         }
 
@@ -639,6 +619,7 @@ async def save_draft_to_file(draft_content: Dict[str, Any], file_path: Path) -> 
     async with aiofiles.open(file_path.with_suffix('.txt'), "w", encoding="utf-8") as f:
         await f.write(rendered_content)
 
+
 async def get_draft(
         db: orm.Session,
         current_user: schemas.UserInDB
@@ -661,13 +642,12 @@ async def get_draft(
 
     try:
         data = await read_draft_from_file(Path(file_path))
-        #print("data", data)
         if data.get("owner_id") != current_user.id:
             raise HTTPException(status_code=403, detail="Вы не можете смотреть чужие черновики")
 
         return schemas.DraftData(
             description=data.get("description"),
-            full_description = data.get("full_description"),
+            full_description=data.get("full_description"),
             category=data.get("category"),
             subject=data.get("subject"),
             content_text=data.get("content_text"),
@@ -690,7 +670,6 @@ async def read_draft_from_file(file_path: Path) -> dict:
 
             return data
     except json.JSONDecodeError as e:
-        #print(f"Ошибка декодирования JSON {file_path}: {str(e)}")
         raise HTTPException(status_code=500, detail=f"Некорректный JSON в черновике: {str(e)}")
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Ошибка чтения черновика: {str(e)}")
@@ -709,13 +688,11 @@ async def cleanup_draft(db: orm.Session, owner_id: str, drafts_dir: Path = "draf
         filename = f"draft_{owner_id}.json"
         file_path = drafts_dir / filename
 
-
         file_path.parent.mkdir(parents=True, exist_ok=True)
 
         async with aiofiles.open(file_path, "w", encoding="utf-8") as f:
             await f.write("")
 
-        #print(f"Содержимое файла черновика {file_path} очищено")
 
     except Exception as e:
         db.rollback()
@@ -723,75 +700,66 @@ async def cleanup_draft(db: orm.Session, owner_id: str, drafts_dir: Path = "draf
 
     except Exception as e:
         db.rollback()
-        #print(f"Ошибка при очистке черновика: {str(e)}")
         raise HTTPException(status_code=500, detail=f"Ошибка при очистке черновика: {str(e)}")
 
 
-# async def cleanup_old_gdz(db: orm.Session):
-#     MAX_GDZ = 100
-#     try:
-#         total = db.query(models.GDZ).count()
-#         #print(total)
-#         if total > MAX_GDZ:
-#             old_gdz = (
-#                 db.query(models.GDZ)
-#                 .order_by(models.GDZ.id.asc())
-#                 .limit(total - MAX_GDZ)
-#                 .all()
-#             )
+async def cleanup_old_gdz(db: orm.Session):
+    MAX_GDZ = 100
+    try:
+        total = db.query(models.GDZ).count()
+        if total > MAX_GDZ:
+            old_gdz = (
+                db.query(models.GDZ)
+                .order_by(models.GDZ.id.asc())
+                .limit(total - MAX_GDZ)
+                .all()
+            )
+
+            gdz_to_delete: List[int] = []
+            file_paths: List[str] = []
+
+            for gdz in old_gdz:
+                gdz_to_delete.append(gdz.id)
+                file_name = gdz.content.split("/")[-1]
+                file_path = os.path.join("media/", os.path.basename(file_name))
+                file_paths.append(file_path)
 
 
-#             gdz_to_delete: List[int] = []
-#             file_paths: List[str] = []
+            purchase_count = (db.query(models.Purchase).
+                              filter(models.Purchase.gdz_id.in_(gdz_to_delete)).
+                              delete())
+
+            (db.query(models.Codes).
+             filter(models.Codes.gdz_id.in_(gdz_to_delete)).
+             delete())
+
+            (db.query(models.GDZRating).
+             filter(models.GDZRating.gdz_id.in_(gdz_to_delete)).
+             delete())
+
+            affected_users = db.query(models.GDZ.owner_id).filter(models.GDZ.id.in_(gdz_to_delete)).distinct().all()
+            for user_id in [u.owner_id for u in affected_users]:
+                update_user_rating(db, user_id)
+
+            a = db.query(models.GDZ).filter(models.GDZ.id.in_(gdz_to_delete)).delete()
+            db.commit()
+
+            for file_path in file_paths:
+                try:
+                    if os.path.exists(file_path):
+                        os.remove(file_path)
+                except Exception as e:
+                    raise HTTPException(status_code=500, detail=f"Ошибка при удалении файла: {str(e)}")
 
 
-#             for gdz in old_gdz:
-#                 gdz_to_delete.append(gdz.id)
-#                 file_name = gdz.content.split("/")[-1]
-#                 #print(file_name)
-#                 file_path = os.path.join("media/", os.path.basename(file_name))
-#                 file_paths.append(file_path)
+    except Exception as e:
+        db.rollback()
+        raise HTTPException(status_code=500, detail=f"Ошибка при очистке ГДЗ: {str(e)}")
 
-#             #print(gdz_to_delete)
-#             #print(file_paths)
-
-#             purchase_count =(db.query(models.Purchase).
-#              filter(models.Purchase.gdz_id.in_(gdz_to_delete)).
-#              delete())
-#             #print(purchase_count)
-
-#             (db.query(models.Codes).
-#              filter(models.Codes.gdz_id.in_(gdz_to_delete)).
-#              delete())
-
-#             (db.query(models.GDZRating).
-#              filter(models.GDZRating.gdz_id.in_(gdz_to_delete)).
-#              delete())
-
-#             affected_users = db.query(models.GDZ.owner_id).filter(models.GDZ.id.in_(gdz_to_delete)).distinct().all()
-#             #print(affected_users)
-#             for user_id in [u.owner_id for u in affected_users]:
-#                 update_user_rating(db, user_id)
-
-#             a = db.query(models.GDZ).filter(models.GDZ.id.in_(gdz_to_delete)).delete()
-#             db.commit()
-
-#             for file_path in file_paths:
-#                 try:
-#                     if os.path.exists(file_path):
-#                         os.remove(file_path)
-#                 except Exception as e:
-#                     raise HTTPException(status_code=500, detail=f"Ошибка при удалении файла: {str(e)}")
-
-
-#     except Exception as e:
-#         db.rollback()
-#         raise HTTPException(status_code=500, detail=f"Ошибка при очистке ГДЗ: {str(e)}")
 
 async def get_user_gdz_ratings_last(db: orm.Session, user_id: int) -> List[schemas.GDZRatingOut]:
     five_minutes_ago = datetime.utcnow() - timedelta(minutes=5)
 
-    # Базовый запрос
     query = (
         db.query(models.GDZRating)
         .join(models.GDZ)
@@ -800,6 +768,5 @@ async def get_user_gdz_ratings_last(db: orm.Session, user_id: int) -> List[schem
     )
 
     ratings = query.order_by(models.GDZRating.created_at.asc()).all()
-    
-    # Преобразуем в Pydantic модель
+
     return [schemas.GDZRatingOut.from_orm(rating) for rating in ratings]
