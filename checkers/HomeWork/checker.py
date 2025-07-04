@@ -86,7 +86,7 @@ def _gen_user():
     except FileNotFoundError as e:
         _die(ExitStatus.CHECKER_ERROR, f"Failed to generate user: missing file {e}")
     except Exception as e:
-        _die(ExitStatus.CHECKER_ERROR, f"Failed to generate user: {e}")
+        _die(ExitStatus.MUMBLE, f"Failed to generate user: {e}")
 
 
 CATEGORIES = [
@@ -148,7 +148,7 @@ def _gen_gdz(is_elite=False, is_paid=False):
             "price": price,
             "is_elite": is_elite,
         }
-        return gdz_data, gdz["content"], category  # Нет файла
+        return gdz_data, gdz["content"], category 
 
 
 def _register(s, user):
@@ -171,7 +171,7 @@ def _login(s, username, password):
         _die(ExitStatus.MUMBLE, f"Unexpected /token code {r.status_code}")
     token = r.json().get("access_token")
     if not token:
-        _die(ExitStatus.MUMBLE, f"No token in /token response")
+        _die(ExitStatus.CORRUPT, f"No token in /token response")
     s.headers.update({"Authorization": f"Bearer {token}"})
     return token
 
@@ -186,11 +186,11 @@ def _create_gdz(s, gdz_data, file_path):
                     file_content = f.read()
                 files["content_file"] = ("solution.png", file_content, "image/png")
             except FileNotFoundError as e:
-                _die(ExitStatus.MUMBLE, f"File not found: {file_path}")
+                _die(ExitStatus.CHECKER_ERROR, f"File not found: {file_path}")
 
         r = s.post("/gdz/create", files=files)
     except Exception as e:
-        _die(ExitStatus.DOWN, f"Failed to create GDZ: {e}")
+        _die(ExitStatus.MUMBLE, f"Failed to create GDZ: {e}")
     if r.status_code != 200:
         _log(f"Unexpected /gdz/create code {r.status_code} with body {r.text}")
         _die(ExitStatus.MUMBLE, f"Unexpected /gdz/create code {r.status_code}")
@@ -202,6 +202,10 @@ def _get_gdz(s, gdz_id):
         r = s.get(f"/gdz/{gdz_id}/full")
     except Exception as e:
         _die(ExitStatus.DOWN, f"Failed to get GDZ: {e}")
+    if r.status_code == 403:
+        _die(ExitStatus.MUMBLE, f"Unexpected status code {r.status_code}")
+    if r.status_code == 404:
+        _die(ExitStatus.CORRUPT, f"GDZ not found {r.status_code}")
     return r
 
 
@@ -210,14 +214,10 @@ def _free_purchase_gdz(s, gdz_id):
         r = s.post(f"/gdz/{gdz_id}/free-purchase")
     except Exception as e:
         _die(ExitStatus.DOWN, f"Failed to free purchase GDZ: {e}")
-    if r.status_code != 201:
-        _log(
-            f"Unexpected /gdz/{gdz_id}/free-purchase code {r.status_code} with body {r.text}"
-        )
-        _die(
-            ExitStatus.MUMBLE,
-            f"Unexpected /gdz/{gdz_id}/free-purchase code {r.status_code}",
-        )
+    if r.status_code == 404:
+        _die(ExitStatus.CORRUPT, f"GDZ not found {r.status_code}")
+    if r.status_code == 400:
+        _die(ExitStatus.MUMBLE, f"Unexpected /gdz/{gdz_id}/purchase code {r.status_code}")
     return r.json()
 
 
@@ -226,16 +226,14 @@ def _purchase_gdz(s, gdz_id):
         r = s.post(f"/gdz/{gdz_id}/purchase")
     except Exception as e:
         _die(ExitStatus.DOWN, f"Failed to purchase GDZ: {e}")
-    if r.status_code != 201:
-        _log(
-            f"Unexpected /gdz/{gdz_id}/purchase code {r.status_code} with body {r.text}"
-        )
-        _die(
-            ExitStatus.MUMBLE, f"Unexpected /gdz/{gdz_id}/purchase code {r.status_code}"
-        )
+    if r.status_code == 404:
+        _die(ExitStatus.CORRUPT, f"GDZ not found {r.status_code}")
+    if r.status_code == 400:
+        _die(ExitStatus.MUMBLE, f"Unexpected /gdz/{gdz_id}/purchase code {r.status_code}")
+
     confirmation_code = r.json().get("confirmation_code")
     if not confirmation_code:
-        _die(ExitStatus.MUMBLE, f"No confirmation code in purchase response")
+        _die(ExitStatus.CORRUPT, f"No confirmation code in purchase response")
 
     n = 160301046244593794374726426877457303604019537423736458260136643925405546154653037172463089669436445456557499425029994701102494179131569495553118775092473011745647436677950345054183103280168169605050154349614937369702539109115434630721210013794356412532578527347021846882486616784364644818143571566741240343519
     d = 106867364163062529583150951251638202402679691615824305506757762616937030769768691448308726446290963637704999616686663134068329452754379663702079183394981990945329295012055489191325887232050991358371457973464894055499039990700519040610630249324976268648754088450636207724270010117036618338292116885343831669547
@@ -266,6 +264,8 @@ def _rate_gdz(s, gdz_id, value):
         r = s.post("/gdz/rate", json={"gdz_id": gdz_id, "value": value})
     except Exception as e:
         _die(ExitStatus.DOWN, f"Failed to rate GDZ: {e}")
+    if r.status_code == 404:
+        _die(ExitStatus.CORRUPT, f"GDZ not found {r.status_code}")
     if r.status_code != 200:
         _log(f"Unexpected /gdz/rate code {r.status_code} with body {r.text}")
         _die(ExitStatus.MUMBLE, f"Unexpected /gdz/rate code {r.status_code}")
@@ -287,7 +287,7 @@ def _check_category(s, category, gdz_id):
         )
     gdz_list = r.json()
     if not any(g["id"] == gdz_id for g in gdz_list):
-        _die(ExitStatus.MUMBLE, f"GDZ {gdz_id} not found in category {category}")
+        _die(ExitStatus.CORRUPT, f"GDZ {gdz_id} not found in category {category}")
     return gdz_list
 
 
@@ -307,6 +307,8 @@ def _get_draft(s):
         r = s.get("/gdz/get_draft")
     except Exception as e:
         _die(ExitStatus.DOWN, f"Failed to get draft: {e}")
+    if r.status_code == 404:
+         _die(ExitStatus.CORRUPT, f"User not found {r.status_code}")
     if r.status_code != 200:
         _log(f"Unexpected /gdz/get_draft code {r.status_code} with body {r.text}")
         _die(ExitStatus.MUMBLE, f"Unexpected /gdz/get_draft code {r.status_code}")
@@ -322,19 +324,20 @@ def _compare_ratings(actual, expected):
 
 
 def _boost_user_rating(s_owner: FakeSession, user_owner: dict, s_rater: FakeSession):
-    _log("Start boosting user rating")
     gdz_ids = []
     for _ in range(5):
         gdz_data, file, _ = _gen_gdz(is_elite=False, is_paid=True)
         gdz = _create_gdz(s_owner, gdz_data, file)
         gdz_id = gdz.get("id")
         if not gdz_id:
-            _die(ExitStatus.MUMBLE, "Can't get user ID for boosting rating")
+            _die(ExitStatus.CORRUPT, "Can't get user ID for boosting rating")
         gdz_ids.append(gdz_id)
         _purchase_gdz(s_rater, gdz_id)
         _rate_gdz(s_rater, gdz_id, 5)
         time.sleep(0.1)
     r = s_owner.get("/profile/data")
+    if r.status_code == 404:
+         _die(ExitStatus.CORRUPT, f"User not found {r.status_code}")
     if r.status_code != 200:
         _die(ExitStatus.MUMBLE, f"Unexpected code /profile/data: {r.status_code}")
     rating = r.json().get("user_rating")
@@ -350,7 +353,6 @@ def _boost_user_rating(s_owner: FakeSession, user_owner: dict, s_rater: FakeSess
 def check(host: str):
     s1 = FakeSession(host, PORT)
     s2 = FakeSession(host, PORT)
-    s2_first = FakeSession(host, PORT)
     s3 = FakeSession(host, PORT)
     s4 = FakeSession(host, PORT)
 
@@ -378,11 +380,13 @@ def check(host: str):
     gdz1_id = gdz1.get("id")
     gdz2_id = gdz2.get("id")
     if not gdz1_id or not gdz2_id:
-        _die(ExitStatus.MUMBLE, "Can't get GDZ id")
+        _die(ExitStatus.CORRUPT, "Can't get GDZ id")
 
     _log("Checking GDZ in user profile...")
     r1 = s1.get("/profile/data")
     r2 = s2.get("/profile/data")
+    if r1.status_code == 404 or r2.status_code == 404:
+         _die(ExitStatus.CORRUPT, f"User not found {r1.status_code} или {r2.status_code}")
     if r1.status_code != 200 or r2.status_code != 200:
         _die(
             ExitStatus.MUMBLE,
@@ -393,40 +397,35 @@ def check(host: str):
     if not any(g["id"] == gdz1_id for g in profile1["gdz_list"]) or not any(
             g["id"] == gdz2_id for g in profile2["gdz_list"]
     ):
-        _die(ExitStatus.MUMBLE, "Can't find GDZ in users profile")
+        _die(ExitStatus.CORRUPT, "Can't find GDZ in users profile")
 
     _log("Checking categoty for GDZ of user2...")
     _check_category(s1, category2, gdz2_id)
 
     _log(
         "user1 trying to buy user2's GDZ. user2 trying to free open user1's GDZ..."
-        # "Пользователь 1 покупает ГДЗ пользователя 2, пользователь 2 бесплатно получает ГДЗ пользователя 1"
     )
     _purchase_gdz(s1, gdz2_id)
 
     _log(
         "Checking access to purchase GDZ..."
-        # "Проверка доступа к приобретенным ГДЗ"
     )
     gdz1_full = _get_gdz(s2, gdz1_id)
-    if (
-            gdz1_full.status_code != 200
-            or gdz1_full.json()["content_text"] != gdz_data1["content_text"]
-    ):
+    if gdz1_full.json()["content_text"] != gdz_data1["content_text"]:
+        _die(ExitStatus.CORRUPT, "GDZ data mismatch")
+    if gdz1_full.status_code != 200:
         _die(
             ExitStatus.MUMBLE,
             "Found differences between contents of purchased GDZ 1 from s2",
-            # "Несоответствие содержимого купленного ГДЗ",
         )
+
     gdz2_full = _get_gdz(s1, gdz2_id)
-    if (
-            gdz2_full.status_code != 200
-            or gdz2_full.json()["content_text"] != gdz_data2["content_text"]
-    ):
+    if gdz2_full.json()["content_text"] != gdz_data2["content_text"]:
+         _die(ExitStatus.CORRUPT, "GDZ data mismatch")
+    if gdz2_full.status_code != 200:
         _die(
             ExitStatus.MUMBLE,
             "Found differences between contents of purchased GDZ 2 from s1",
-            # "Несоответствие содержимого купленного ГДЗ",
         )
 
     _log("Creating and checking draft...")
@@ -444,11 +443,11 @@ def check(host: str):
     _save_draft(s2, draft_data2)
     draft2 = _get_draft(s2)
     if not draft2 or "content_text" not in draft2:
-        _die(ExitStatus.MUMBLE, "No draft or content_text found for user2")
+        _die(ExitStatus.CORRUPT, "No draft or content_text found for user2")
     for key, value in draft_data2.items():
         if draft2.get(key) != value:
             _die(
-                ExitStatus.MUMBLE,
+                ExitStatus.CORRUPT,
                 f"Draft field {key} mismatch for user2: expected {value}, got {draft2.get(key)}",
             )
 
@@ -459,110 +458,110 @@ def put(host: str, flag_id: str, flag: str, vuln: int):
     s = FakeSession(host, PORT)
 
     if vuln == 3:
-        _log(f"vuln {vuln} started...")
+        try:
+            user = None
+            while user is None:
+                user = _gen_user()
 
-        user = None
-        while user == None:
-            user = _gen_user()
+            _register(s, user)
+            _login(s, user["username"], user["password"])
 
-        _register(s, user)
-        _login(s, user["username"], user["password"])
-
-        gdz_data, file, _ = _gen_gdz(is_elite=False, is_paid=True)
-        gdz_data["full_description"] = flag
-        gdz = _create_gdz(s, gdz_data, file)
-        gdz_id = gdz.get("id")
-        if not gdz_id:
-            _die(ExitStatus.CHECKER_ERROR, "Failed to get GDZ ID for vuln1")
-        jd = json.dumps(
-            {
-                "username": user["username"],
-                "password": user["password"],
-                "gdz_id": str(gdz_id),
-            }
-        )
-        print(jd, flush=True)
-        _die(ExitStatus.OK, f"{jd}")
+            gdz_data, file, _ = _gen_gdz(is_elite=False, is_paid=True)
+            gdz_data["full_description"] = flag
+            gdz = _create_gdz(s, gdz_data, file)
+            gdz_id = gdz.get("id")
+            if not gdz_id:
+                _die(ExitStatus.CORRUPT, "Failed to get GDZ ID for vuln3")
+            jd = json.dumps(
+                {
+                    "username": user["username"],
+                    "password": user["password"],
+                    "gdz_id": str(gdz_id),
+                }
+            )
+            print(jd, flush=True)
+            _die(ExitStatus.OK, f"{jd}")
+        except Exception as e:
+            _log("Failed to put flag in vuln3")
+            _die(ExitStatus.MUMBLE, f"Failed to put flag: {e}")
 
     elif vuln == 2:
-        _log(f"vuln {vuln} started...")
-
-        user = None
-        while user == None:
-            user = _gen_user()
-
-        _register(s, user)
-        _login(s, user["username"], user["password"])
-
-        gdz_data, _, category = _gen_gdz(is_elite=False, is_paid=True)
         try:
-            category_part, subject_part = category.split("_", 1)
-        except ValueError:
-            _die(ExitStatus.CHECKER_ERROR, f"Invalid category format: {category}")
-        draft_data = {
-            "description": gdz_data["description"],
-            "full_description": gdz_data["full_description"],
-            "category": category_part,
-            "subject": subject_part,
-            "content_text": flag,
-            "price": str(gdz_data["price"]),
-            "is_elite": "false",
-        }
-        # _log(f"Saving draft with data: {draft_data}")
-        draft_response = _save_draft(s, draft_data)
-        if draft_response.get("status") != "success":
-            # _log(f"Unexpected draft response: {draft_response}")
-            _die(ExitStatus.MUMBLE, "Failed to save draft for vuln2")
-        jd = json.dumps({"username": user["username"], "password": user["password"]})
-        print(jd, flush=True)
-        _die(ExitStatus.OK, f"{jd}")
+            user = None
+            while user is None:
+                user = _gen_user()
+
+            _register(s, user)
+            _login(s, user["username"], user["password"])
+
+            gdz_data, _, category = _gen_gdz(is_elite=False, is_paid=True)
+            try:
+                category_part, subject_part = category.split("_", 1)
+            except ValueError:
+                _die(ExitStatus.CHECKER_ERROR, f"Invalid category format: {category}")
+            draft_data = {
+                "description": gdz_data["description"],
+                "full_description": gdz_data["full_description"],
+                "category": category_part,
+                "subject": subject_part,
+                "content_text": flag,
+                "price": str(gdz_data["price"]),
+                "is_elite": "false",
+            }
+            draft_response = _save_draft(s, draft_data)
+            if draft_response.get("status") != "success":
+                _die(ExitStatus.MUMBLE, "Failed to save draft for vuln2")
+            jd = json.dumps({"username": user["username"], "password": user["password"]})
+            print(jd, flush=True)
+            _die(ExitStatus.OK, f"{jd}")
+        except Exception as e:
+            _log("Failed to put flag in vuln2")
+            _die(ExitStatus.MUMBLE, f"Failed to put flag: {e}")
 
     elif vuln == 1:
-        user_elite = _gen_user()
-        _register(s, user_elite)
-        _login(s, user_elite["username"], user_elite["password"])
-        # Создание второго пользователя для накрутки рейтинга
-        s_rater = FakeSession(host, PORT)
-        user_rater = _gen_user()
-        _register(s_rater, user_rater)
-        _login(s_rater, user_rater["username"], user_rater["password"])
-        # Накрутка рейтинга
-        _boost_user_rating(s, user_elite, s_rater)
-        with open("last_elite_user.json", "w") as f:
-            json.dump({"username": user_elite["username"], "password": user_elite["password"]}, f)
-
-        gdz_data, file, _ = _gen_gdz(is_elite=True, is_paid=False)
-        gdz_data["description"] = flag
-        gdz = _create_gdz(s, gdz_data, file)
-        gdz_id = gdz.get("id")
-        if not gdz_id:
-            _die(ExitStatus.CHECKER_ERROR, "Failed to get GDZ ID for vuln3")
-        jd = json.dumps(
-            {
-                "username": user_elite["username"],
-                "password": user_elite["password"],
-                "gdz_id": str(gdz_id)
-            }
-        )
-        print(jd, flush=True)
-        _die(ExitStatus.OK, f"{jd}")
-
+        try:
+            user_elite = _gen_user()
+            _register(s, user_elite)
+            _login(s, user_elite["username"], user_elite["password"])
+            s_rater = FakeSession(host, PORT)
+            user_rater = _gen_user()
+            _register(s_rater, user_rater)
+            _login(s_rater, user_rater["username"], user_rater["password"])
+            _boost_user_rating(s, user_elite, s_rater)
+            
+            gdz_data, file, _ = _gen_gdz(is_elite=True, is_paid=False)
+            gdz_data["description"] = flag
+            gdz = _create_gdz(s, gdz_data, file)
+            gdz_id = gdz.get("id")
+            if not gdz_id:
+                _die(ExitStatus.CORRUPT, "Failed to get GDZ ID for vuln1")
+            jd = json.dumps(
+                {
+                    "username": user_elite["username"],
+                    "password": user_elite["password"],
+                    "gdz_id": str(gdz_id)
+                }
+            )
+            print(jd, flush=True)
+            _die(ExitStatus.OK, f"{jd}")
+        except Exception as e:
+            _log("Failed to put flag in vuln1")
+            _die(ExitStatus.MUMBLE, f"Failed to put flag: {e}")
 
     else:
         _die(ExitStatus.CHECKER_ERROR, f"Unknown vuln: {vuln}")
+
+
 
 
 def get(host: str, flag_id: str, flag: str, vuln: int):
     s = FakeSession(host, PORT)
 
     _log(f"Received flag_id: {flag_id}")
-    try:
-        flag_id_data = json.loads(flag_id)
-        _log(f"data in get: {flag_id_data}")
-        if not flag_id_data:
-            raise ValueError
-    except:
-        _die(ExitStatus.CHECKER_ERROR, f"Unexpected flagID from jury: {flag_id}!")
+    flag_id_data = json.loads(flag_id)
+    _log(f"data in get: {flag_id_data}")
+    if not flag_id_data:
+        _die(ExitStatus.CHECKER_ERROR, "ERROR json.loads")
 
     if vuln == 3:
         try:
@@ -574,8 +573,6 @@ def get(host: str, flag_id: str, flag: str, vuln: int):
             _die(ExitStatus.CHECKER_ERROR, f"Invalid flag_id for vuln1: {e}")
         _login(s, username, password)
         gdz = _get_gdz(s, gdz_id)
-        if gdz.status_code != 200:
-            _die(ExitStatus.CORRUPT, f"Failed to get GDZ {gdz_id}")
         if gdz.json().get("full_description") != flag:
             _die(ExitStatus.CORRUPT, "Flag mismatch for vuln1")
         _die(ExitStatus.OK, "Get vuln1 OK")
@@ -592,8 +589,7 @@ def get(host: str, flag_id: str, flag: str, vuln: int):
             _die(ExitStatus.CORRUPT, "No draft or content_text found for vuln2")
         if draft["content_text"] != flag:
             _die(ExitStatus.CORRUPT, "Flag mismatch for vuln2")
-        if "category" in draft and "subject" in draft:
-            _die(ExitStatus.OK, "Get vuln2 OK")
+        _die(ExitStatus.OK, "Get vuln2 OK")
 
     elif vuln == 1:
         try:
@@ -604,8 +600,6 @@ def get(host: str, flag_id: str, flag: str, vuln: int):
             _die(ExitStatus.CHECKER_ERROR, f"Invalid flag_id for vuln3: {e}")
         _login(s, username, password)
         gdz = _get_gdz(s, gdz_id)
-        if gdz.status_code != 200:
-            _die(ExitStatus.CORRUPT, f"Failed to get GDZ {gdz_id}")
         if gdz.json().get("description") != flag:
             _die(ExitStatus.CORRUPT, "Flag mismatch for vuln3")
         _die(ExitStatus.OK, "Get vuln3 OK")
@@ -618,8 +612,6 @@ def get(host: str, flag_id: str, flag: str, vuln: int):
             _die(ExitStatus.CHECKER_ERROR, f"Invalid flag_id for vuln3: {e}")
         _login(s, username, password)
         gdz = _get_gdz(s, gdz_id)
-        if gdz.status_code != 200:
-            _die(ExitStatus.CORRUPT, f"Failed to get GDZ {gdz_id}")
         if gdz.json().get("description") != flag:
             _die(ExitStatus.CORRUPT, "Flag mismatch for vuln3")
         _die(ExitStatus.OK, "Get vuln3 OK")
@@ -637,15 +629,9 @@ def get(host: str, flag_id: str, flag: str, vuln: int):
         gdz = _create_gdz(s_elite, gdz_data, file)
         gdz_id = gdz.get("id")
         gdz = _get_gdz(s, gdz_id)
-        if gdz.status_code != 200:
-            _die(ExitStatus.CORRUPT, f"Failed to get GDZ {gdz_id}")
 
     else:
         _die(ExitStatus.CHECKER_ERROR, f"Unknown vuln: {vuln}")
-
-
-def rand_string(n=12, alphabet=string.ascii_letters + string.digits):
-    return "".join(random.choice(alphabet) for _ in range(n))
 
 
 def _log(obj):
