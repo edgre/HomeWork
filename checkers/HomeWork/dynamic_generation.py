@@ -332,6 +332,7 @@ def generate_school_informatics_task():
 
 
 def generate_school_physics_task():
+    global answer
     GRADES = {
         7: ["кинематика", "плотность вещества", "давление"],
         8: ["тепловые явления", "электричество", "оптика"],
@@ -1056,15 +1057,15 @@ def _gen_gdz_js(is_elite=False, is_paid=False):
 
     # Заголовки для full_description
     full_descriptions = [
-        "О приведении типов и == :",
-        "О контексте this:",
-        "Об асинхронности и Callback Hell:",
-        "О фреймворках:",
-        "О глобальной области видимости:",
-        "О NaN:",
-        "О регулярных выражениях:",
-        "О Event Loop:",
-        "Об отладчике и console.log:"
+        "О приведении типов и == ",
+        "О контексте this",
+        "Об асинхронности и Callback Hell",
+        "О фреймворках",
+        "О глобальной области видимости",
+        "О NaN",
+        "О регулярных выражениях",
+        "О Event Loop",
+        "Об отладчике и console.log"
     ]
 
     # Цитаты для content_text
@@ -1176,7 +1177,7 @@ def dynamic_generate(category):
     book, exercise, answer, path = generator()
     book = clean_string(book)
     exercise = clean_string(exercise)
-    answer = clean_string(exercise)
+    answer = clean_string(answer)
     task = {
         "description": book,
         "full_description": exercise,
