@@ -458,7 +458,7 @@ def check(host: str):
 def put(host: str, flag_id: str, flag: str, vuln: int):
     s = FakeSession(host, PORT)
 
-    if vuln == 1:
+    if vuln == 3:
         _log(f"vuln {vuln} started...")
 
         user = None
@@ -517,7 +517,7 @@ def put(host: str, flag_id: str, flag: str, vuln: int):
         print(jd, flush=True)
         _die(ExitStatus.OK, f"{jd}")
 
-    elif vuln == 3:
+    elif vuln == 1:
         user_elite = _gen_user()
         _register(s, user_elite)
         _login(s, user_elite["username"], user_elite["password"])
@@ -564,7 +564,7 @@ def get(host: str, flag_id: str, flag: str, vuln: int):
     except:
         _die(ExitStatus.CHECKER_ERROR, f"Unexpected flagID from jury: {flag_id}!")
 
-    if vuln == 1:
+    if vuln == 3:
         try:
             username = flag_id_data["username"]
             password = flag_id_data["password"]
@@ -595,7 +595,7 @@ def get(host: str, flag_id: str, flag: str, vuln: int):
         if "category" in draft and "subject" in draft:
             _die(ExitStatus.OK, "Get vuln2 OK")
 
-    elif vuln == 3:
+    elif vuln == 1:
         try:
             username = flag_id_data["username"]
             password = flag_id_data["password"]
