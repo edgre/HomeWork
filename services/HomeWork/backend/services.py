@@ -208,7 +208,7 @@ async def create_gdz(
         if user.has_draft:
             await cleanup_draft(db, owner_id)
 
-        asyncio.create_task(cleanup_old_gdz(db))
+        # asyncio.create_task(cleanup_old_gdz(db))
         return gdz
 
     except HTTPException:
