@@ -15,7 +15,6 @@ class User(db.Base):
 
     GDZ = orm.relationship("GDZ", back_populates="user")
     purchases = orm.relationship("Purchase", back_populates="buyer")
-    # drafts = orm.relationship("GDZDraft", back_populates="owner")
 
     def verify_password(self, password: str):
         return hash.bcrypt.verify(password, self.password_hash)
@@ -47,16 +46,15 @@ class Purchase(db.Base):
     __tablename__ = 'purchases'
     id = sql.Column(sql.Integer, primary_key=True, index=True)
     buyer_id = sql.Column(sql.Integer, sql.ForeignKey('users.id'))
-    gdz_id = sql.Column(sql.Integer, sql.ForeignKey('gdz.id'))  # Исправлено с posts.id на gdz.id
+    gdz_id = sql.Column(sql.Integer, sql.ForeignKey('gdz.id'))
 
-    # Связи
     buyer = orm.relationship("User", back_populates="purchases")
     gdz = orm.relationship("GDZ")
 
 class GDZRating(db.Base):
     __tablename__ = 'gdz_ratings'
     __table_args__ = (
-        sql.Index('ix_gdz_rating_gdz_id', 'gdz_id'),  # Индекс для поиска по gdz_id
+        sql.Index('ix_gdz_rating_gdz_id', 'gdz_id'),
     )
     id = sql.Column(sql.Integer, primary_key=True, index=True)
     gdz_id = sql.Column(sql.Integer, sql.ForeignKey('gdz.id'))
@@ -64,7 +62,6 @@ class GDZRating(db.Base):
     value = sql.Column(sql.Float, nullable=False)
     created_at = sql.Column(sql.DateTime, nullable=False)
 
-    # Связи
     gdz = orm.relationship("GDZ")
     user = orm.relationship("User")
 
@@ -78,16 +75,3 @@ class Codes(db.Base):
 
     user = orm.relationship("User")
     gdz = orm.relationship("GDZ")
-
-
-# class GDZDraft(db.Base):
-#     __tablename__ = 'gdz_drafts'
-#     __table_args__ = (
-#         sql.UniqueConstraint('owner_id', name='uix_owner'),
-#     )
-#
-#     id = sql.Column(sql.Integer, primary_key=True)
-#     owner_id = sql.Column(sql.Integer, sql.ForeignKey("users.id"), nullable=False)
-#     file_path = sql.Column(sql.String, nullable=False)
-#
-#     owner = orm.relationship("User", back_populates="drafts")

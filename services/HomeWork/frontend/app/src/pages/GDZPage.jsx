@@ -1,6 +1,5 @@
 import { useParams, useNavigate } from "react-router-dom";
 import PreviewHomework from "../components/ui/previewHomework";
-//import "../assets/styles/gdzPage.css";
 
 const GdzPage = () => {
     const { gdzId } = useParams();

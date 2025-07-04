@@ -96,13 +96,6 @@ async def get_gdz_by_category(
         db: Session = Depends(get_db)):
     return await services.get_gdz_by_category(category, current_user, db)
 
-# @app.get("/gdz/{gdz_id}", response_model=schemas.GDZPublic)
-# async def get_gdz_by_id(gdz_id: int, db: Session = Depends(get_db)):
-#     gdz = await services.get_gdz_by_id(db, gdz_id)
-#     if not gdz:
-#         raise HTTPException(status_code=404, detail="ГДЗ не найдено")
-#     return gdz
-
 
 @app.get("/gdz/{gdz_id}/full", response_model=schemas.GDZPrivate)
 async def get_gdz_full(

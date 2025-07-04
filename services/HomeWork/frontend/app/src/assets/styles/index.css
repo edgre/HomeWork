@@ -53,19 +53,7 @@ svg * {
   transition-property: fill, stroke;
 }
 
-/**
-  Нормализация блочной модели
- */
-/* *,
-*::before,
-*::after {
-  box-sizing: border-box;
-} */
 
-/**
-   Убираем внутренние отступы слева тегам списков,
-   у которых есть атрибут class
-  */
 :where(ul, ol):where([class]) {
   padding-left: 0;
 }

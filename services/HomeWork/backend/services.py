@@ -154,7 +154,7 @@ async def save_uploaded_file(file: UploadFile, upload_dir: str = "media") -> str
         filepath = os.path.join(upload_dir, filename)
         try:
             async with aiofiles.open(filepath, "wb") as buffer:
-                while chunk := await file.read(1024 * 1024):  # Читаем по 1MB за раз
+                while chunk := await file.read(1024 * 1024):
                     await buffer.write(chunk)
         except Exception as e:
             raise HTTPException(500, detail=f"Ошибка при сохранении файла: {str(e)}")

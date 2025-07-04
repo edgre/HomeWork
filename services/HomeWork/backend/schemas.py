@@ -27,7 +27,6 @@ class GDZCreate(BaseModel):
         full_description: str
         category: str
         price: int
-        # rating: float = 0.0s
         is_elite: bool = False
         content_text: str
 
@@ -56,7 +55,7 @@ class GDZPrivate(GDZPublic):
 
 class GDZRatingIn(BaseModel):
     gdz_id: int
-    value: int  # от 1 до
+    value: int
 
 class GDZRatingOut(BaseModel):
     gdz_id: int
@@ -70,8 +69,7 @@ class UserProfileResponse(BaseModel):
     username: str
     realname: str
     user_rating: Optional[float] = None
-    # is_elite: bool
-    gdz_list: List[GDZPublic]  # Используем существующую модель GDZPrivate
+    gdz_list: List[GDZPublic]
 
     class Config:
         from_attributes = True

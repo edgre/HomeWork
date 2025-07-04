@@ -1,12 +1,5 @@
 import React, { createContext, useState, useEffect, useCallback } from 'react';
 
-/**
- * @typedef {number} id
- * @typedef {Object} User
- * @property {string} username - Логин пользователя
- * @property {string|null} realname - Полное имя (может отсутствовать)
- * @property {number|null} rating - Рейтинг пользователя
- */
 
 export const UserContext = createContext({
   user: null,
