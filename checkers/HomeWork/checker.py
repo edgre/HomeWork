@@ -629,6 +629,8 @@ def get(host: str, flag_id: str, flag: str, vuln: int):
         gdz = _create_gdz(s_elite, gdz_data, file)
         gdz_id = gdz.get("id")
         gdz = _get_gdz(s, gdz_id)
+        if gdz.status_code != 200:
+            _die(ExitStatus.CORRUPT, f"Failed to get GDZ {gdz_id}")
 
     else:
         _die(ExitStatus.CHECKER_ERROR, f"Unknown vuln: {vuln}")
