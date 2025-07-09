@@ -148,7 +148,7 @@ def _gen_gdz(is_elite=False, is_paid=False):
             "price": price,
             "is_elite": is_elite,
         }
-        return gdz_data, gdz["content"], category 
+        return gdz_data, gdz["content"], category
 
 
 def _register(s, user):
@@ -308,7 +308,7 @@ def _get_draft(s):
     except Exception as e:
         _die(ExitStatus.DOWN, f"Failed to get draft: {e}")
     if r.status_code == 404:
-         _die(ExitStatus.CORRUPT, f"User not found {r.status_code}")
+        _die(ExitStatus.CORRUPT, f"User not found {r.status_code}")
     if r.status_code != 200:
         _log(f"Unexpected /gdz/get_draft code {r.status_code} with body {r.text}")
         _die(ExitStatus.MUMBLE, f"Unexpected /gdz/get_draft code {r.status_code}")
@@ -337,7 +337,7 @@ def _boost_user_rating(s_owner: FakeSession, user_owner: dict, s_rater: FakeSess
         time.sleep(0.1)
     r = s_owner.get("/profile/data")
     if r.status_code == 404:
-         _die(ExitStatus.CORRUPT, f"User not found {r.status_code}")
+        _die(ExitStatus.CORRUPT, f"User not found {r.status_code}")
     if r.status_code != 200:
         _die(ExitStatus.MUMBLE, f"Unexpected code /profile/data: {r.status_code}")
     rating = r.json().get("user_rating")
@@ -386,7 +386,7 @@ def check(host: str):
     r1 = s1.get("/profile/data")
     r2 = s2.get("/profile/data")
     if r1.status_code == 404 or r2.status_code == 404:
-         _die(ExitStatus.CORRUPT, f"User not found {r1.status_code} или {r2.status_code}")
+        _die(ExitStatus.CORRUPT, f"User not found {r1.status_code} или {r2.status_code}")
     if r1.status_code != 200 or r2.status_code != 200:
         _die(
             ExitStatus.MUMBLE,
@@ -421,7 +421,7 @@ def check(host: str):
 
     gdz2_full = _get_gdz(s1, gdz2_id)
     if gdz2_full.json()["content_text"] != gdz_data2["content_text"]:
-         _die(ExitStatus.CORRUPT, "GDZ data mismatch")
+        _die(ExitStatus.CORRUPT, "GDZ data mismatch")
     if gdz2_full.status_code != 200:
         _die(
             ExitStatus.MUMBLE,
@@ -457,7 +457,7 @@ def check(host: str):
 def put(host: str, flag_id: str, flag: str, vuln: int):
     s = FakeSession(host, PORT)
 
-    if vuln == 3:
+    if vuln == 1:
         try:
             user = None
             while user is None:
@@ -518,7 +518,7 @@ def put(host: str, flag_id: str, flag: str, vuln: int):
             _log("Failed to put flag in vuln2")
             _die(ExitStatus.MUMBLE, f"Failed to put flag: {e}")
 
-    elif vuln == 1:
+    elif vuln == 3:
         try:
             user_elite = _gen_user()
             _register(s, user_elite)
@@ -528,7 +528,7 @@ def put(host: str, flag_id: str, flag: str, vuln: int):
             _register(s_rater, user_rater)
             _login(s_rater, user_rater["username"], user_rater["password"])
             _boost_user_rating(s, user_elite, s_rater)
-            
+
             gdz_data, file, _ = _gen_gdz(is_elite=True, is_paid=False)
             gdz_data["description"] = flag
             gdz = _create_gdz(s, gdz_data, file)
@@ -552,8 +552,6 @@ def put(host: str, flag_id: str, flag: str, vuln: int):
         _die(ExitStatus.CHECKER_ERROR, f"Unknown vuln: {vuln}")
 
 
-
-
 def get(host: str, flag_id: str, flag: str, vuln: int):
     s = FakeSession(host, PORT)
 
@@ -563,7 +561,7 @@ def get(host: str, flag_id: str, flag: str, vuln: int):
     if not flag_id_data:
         _die(ExitStatus.CHECKER_ERROR, "ERROR json.loads")
 
-    if vuln == 3:
+    if vuln == 1:
         try:
             username = flag_id_data["username"]
             password = flag_id_data["password"]
@@ -591,7 +589,7 @@ def get(host: str, flag_id: str, flag: str, vuln: int):
             _die(ExitStatus.CORRUPT, "Flag mismatch for vuln2")
         _die(ExitStatus.OK, "Get vuln2 OK")
 
-    elif vuln == 1:
+    elif vuln == 3:
         try:
             username = flag_id_data["username"]
             password = flag_id_data["password"]
@@ -599,10 +597,6 @@ def get(host: str, flag_id: str, flag: str, vuln: int):
         except (TypeError, KeyError, ValueError) as e:
             _die(ExitStatus.CHECKER_ERROR, f"Invalid flag_id for vuln3: {e}")
         _login(s, username, password)
-        gdz = _get_gdz(s, gdz_id)
-        if gdz.json().get("description") != flag:
-            _die(ExitStatus.CORRUPT, "Flag mismatch for vuln3")
-        _die(ExitStatus.OK, "Get vuln3 OK")
 
         try:
             username = flag_id_data["username"]
@@ -610,11 +604,6 @@ def get(host: str, flag_id: str, flag: str, vuln: int):
             gdz_id = str(flag_id_data["gdz_id"])
         except (TypeError, KeyError, ValueError) as e:
             _die(ExitStatus.CHECKER_ERROR, f"Invalid flag_id for vuln3: {e}")
-        _login(s, username, password)
-        gdz = _get_gdz(s, gdz_id)
-        if gdz.json().get("description") != flag:
-            _die(ExitStatus.CORRUPT, "Flag mismatch for vuln3")
-        _die(ExitStatus.OK, "Get vuln3 OK")
 
         s_elite = FakeSession(host, PORT)
         user_elite = _gen_user()
@@ -626,11 +615,19 @@ def get(host: str, flag_id: str, flag: str, vuln: int):
         _login(s_rater, user_rater["username"], user_rater["password"])
         _boost_user_rating(s_elite, user_elite, s_rater)
         gdz_data, file, category = _gen_gdz(is_elite=True, is_paid=False)
-        gdz = _create_gdz(s_elite, gdz_data, file)
-        gdz_id = gdz.get("id")
-        gdz = _get_gdz(s, gdz_id)
-        if gdz.status_code != 200:
+        gdz1 = _create_gdz(s_elite, gdz_data, file)
+        gdz_id_elite = gdz1.get("id")
+        gdz1 = _get_gdz(s, gdz_id_elite)
+        if gdz1.status_code != 200:
             _die(ExitStatus.CORRUPT, f"Failed to get GDZ {gdz_id}")
+
+        _login(s, username, password)
+        gdz = _get_gdz(s, gdz_id)
+        if gdz.json().get("description") != flag:
+            _die(ExitStatus.CORRUPT, "Flag mismatch for vuln3")
+        _die(ExitStatus.OK, "Get vuln3 OK")
+
+
 
     else:
         _die(ExitStatus.CHECKER_ERROR, f"Unknown vuln: {vuln}")

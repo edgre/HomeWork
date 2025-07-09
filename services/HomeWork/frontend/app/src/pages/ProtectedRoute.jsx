@@ -1,17 +1,27 @@
 import { Navigate, useLocation } from "react-router-dom";
-import { useContext } from "react";
+import { useContext, useEffect, useState } from "react";
 import { UserContext } from "../contexts/UserContext";
 
 const ProtectedRoute = ({ children }) => {
-  const { user } = useContext(UserContext);
-  const location = useLocation();
+    const { user, isLoading } = useContext(UserContext);
+    const location = useLocation();
+    const [isChecking, setIsChecking] = useState(true);
 
-  if (!user) {
-    // Сохраняем текущий путь для редиректа после авторизации
-    return <Navigate to="/" state={{ from: location }} replace />;
-  }
+    useEffect(() => {
+        if (!isLoading) {
+            setIsChecking(false);
+        }
+    }, [isLoading]);
 
-  return children;
+    if (isChecking) {
+        return null;
+    }
+
+    if (!user) {
+        return <Navigate to="/" state={{ from: location }} replace />;
+    }
+
+    return children;
 };
 
 export default ProtectedRoute;

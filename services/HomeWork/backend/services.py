@@ -80,6 +80,7 @@ async def get_current_user(
         token: str = Depends(oauth2_scheme),
 ):
     try:
+        print(token)
         payload = jwt.decode(token, SECRET_KEY, algorithms=["HS256"])
         user = db.query(models.User).get(payload["id"])
     except:
@@ -208,7 +209,7 @@ async def create_gdz(
         if user.has_draft:
             await cleanup_draft(db, owner_id)
 
-        # asyncio.create_task(cleanup_old_gdz(db))
+        asyncio.create_task(cleanup_old_gdz(db))
         return gdz
 
     except HTTPException:
@@ -233,8 +234,9 @@ async def is_gdz_free(db: orm.Session, gdz_id: int):
     return gdz and gdz.price == 0
 
 
-async def get_gdz_by_category(category: str, current_user: schemas.UserInDB, db: orm.Session):
+async def get_gdz_by_category(category: str, current_user: schemas.UserInDB, db: orm.Session, limit: Optional[int]):
     query = db.query(models.GDZ).filter(models.GDZ.category == category)
+
     if current_user.user_rating is None or current_user.user_rating < 4.8:
         query = query.filter(
             or_(
@@ -243,6 +245,10 @@ async def get_gdz_by_category(category: str, current_user: schemas.UserInDB, db:
             )
         )
 
+    if limit:
+        query = query.order_by(models.GDZ.id.desc()).limit(limit)
+    else:
+        query = query.order_by(models.GDZ.id.desc())
     tasks = query.all()
     res = [
         {
@@ -432,6 +438,12 @@ async def rate_gdz(
         db: orm.Session,
         current_user: schemas.UserInDB
 ):
+    if not (1 <= rating.value <= 5):
+        raise HTTPException(
+            status_code=400,
+            detail="Оценка должна быть от 1 до 5 баллов"
+        )
+
     gdz = (
         db.query(models.GDZ)
         .options(orm.joinedload(models.GDZ.user))
@@ -514,7 +526,6 @@ def update_user_rating(db: orm.Session, owner_id: int):
 
 
 def enforce_elite_access(db: orm.Session, gdz, user):
-
     update_user_rating(db, user.id)
     if gdz.is_elite and gdz.owner_id != user.id:
         if user.user_rating is None or user.user_rating < 4.8:
@@ -599,6 +610,7 @@ async def save_draft_to_file(draft_content: Dict[str, Any], file_path: Path) -> 
     for key in ['description', 'full_description', 'content_text']:
         if key in draft_content and draft_content[key] is not None:
             draft_content[key] = draft_content[key].replace('\n', '\\n')
+            # re.sub(r'([:,`\'"])', r'\\\1',  draft_content[key])
 
     template_lines = []
     for key, value in draft_content.items():
@@ -704,57 +716,66 @@ async def cleanup_draft(db: orm.Session, owner_id: str, drafts_dir: Path = "draf
 
 
 async def cleanup_old_gdz(db: orm.Session):
-    MAX_GDZ = 100
+    MAX_GDZ = 500
     try:
         total = db.query(models.GDZ).count()
+
         if total > MAX_GDZ:
+
+            to_delete = total - MAX_GDZ
+
             old_gdz = (
                 db.query(models.GDZ)
                 .order_by(models.GDZ.id.asc())
-                .limit(total - MAX_GDZ)
+                .limit(to_delete)
                 .all()
             )
 
-            gdz_to_delete: List[int] = []
-            file_paths: List[str] = []
+            gdz_ids_to_delete = [gdz.id for gdz in old_gdz]
 
-            for gdz in old_gdz:
-                gdz_to_delete.append(gdz.id)
-                file_name = gdz.content.split("/")[-1]
-                file_path = os.path.join("media/", os.path.basename(file_name))
-                file_paths.append(file_path)
+            db.query(models.Purchase).filter(
+                models.Purchase.gdz_id.in_(gdz_ids_to_delete)
+            ).delete(synchronize_session=False)
 
+            db.query(models.Codes).filter(
+                models.Codes.gdz_id.in_(gdz_ids_to_delete)
+            ).delete(synchronize_session=False)
 
-            purchase_count = (db.query(models.Purchase).
-                              filter(models.Purchase.gdz_id.in_(gdz_to_delete)).
-                              delete())
+            db.query(models.GDZRating).filter(
+                models.GDZRating.gdz_id.in_(gdz_ids_to_delete)
+            ).delete(synchronize_session=False)
 
-            (db.query(models.Codes).
-             filter(models.Codes.gdz_id.in_(gdz_to_delete)).
-             delete())
+            affected_owners = (
+                db.query(models.GDZ.owner_id)
+                .filter(models.GDZ.id.in_(gdz_ids_to_delete))
+                .distinct()
+                .all()
+            )
 
-            (db.query(models.GDZRating).
-             filter(models.GDZRating.gdz_id.in_(gdz_to_delete)).
-             delete())
+            db.query(models.GDZ).filter(
+                models.GDZ.id.in_(gdz_ids_to_delete)
+            ).delete(synchronize_session=False)
 
-            affected_users = db.query(models.GDZ.owner_id).filter(models.GDZ.id.in_(gdz_to_delete)).distinct().all()
-            for user_id in [u.owner_id for u in affected_users]:
-                update_user_rating(db, user_id)
+            for owner_id in [owner[0] for owner in affected_owners]:
+                update_user_rating(db, owner_id)
 
-            a = db.query(models.GDZ).filter(models.GDZ.id.in_(gdz_to_delete)).delete()
             db.commit()
 
-            for file_path in file_paths:
-                try:
-                    if os.path.exists(file_path):
-                        os.remove(file_path)
-                except Exception as e:
-                    raise HTTPException(status_code=500, detail=f"Ошибка при удалении файла: {str(e)}")
-
+            for gdz in old_gdz:
+                if gdz.content:
+                    file_path = Path("media") / Path(gdz.content).name
+                    try:
+                        if file_path.exists():
+                            file_path.unlink()
+                    except Exception as e:
+                        print(f"Ошибка при удалении файла {file_path}: {str(e)}")
 
     except Exception as e:
         db.rollback()
-        raise HTTPException(status_code=500, detail=f"Ошибка при очистке ГДЗ: {str(e)}")
+        raise HTTPException(
+            status_code=500,
+            detail=f"Ошибка при очистке старых ГДЗ: {str(e)}"
+        )
 
 
 async def get_user_gdz_ratings_last(db: orm.Session, user_id: int) -> List[schemas.GDZRatingOut]:

@@ -52,7 +52,6 @@ async def username(form_data: security.OAuth2PasswordRequestForm = Depends(), db
         raise HTTPException(status_code=401, detail="Incorrect username or password")
     return await services.create_access_token(user)
 
-
 @app.get("/users/me", response_model=schemas.UserInDB)
 async def get_user(user: schemas.User = Depends(services.get_current_user)):
     return user
@@ -89,12 +88,20 @@ async def create_gdz_en(
     return await services.create_gdz(db, gdz_str, content_file, owner_id=current_user.id)
 
 
+
 @app.get("/gdz_category/{category}", response_model=list[schemas.GDZPublicShort])
 async def get_gdz_by_category(
         category: str,
+        limit: int = None,
         current_user: models.User = Depends(services.get_current_user),
-        db: Session = Depends(get_db)):
-    return await services.get_gdz_by_category(category, current_user, db)
+        db: Session = Depends(get_db)
+):
+    return await services.get_gdz_by_category(
+        category=category,
+        current_user=current_user,
+        db=db,
+        limit=limit
+    )
 
 
 @app.get("/gdz/{gdz_id}/full", response_model=schemas.GDZPrivate)

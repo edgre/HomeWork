@@ -19,7 +19,7 @@ const router = createBrowserRouter([
   },
   {
     path: "/home",
-    element: <HomePage />, // Главная доступна без авторизации
+    element: <HomePage />,
   },
   {
     path: "/category/:slug",

@@ -1,6 +1,6 @@
 import random
 import math
-from math import pi,sqrt,  gcd, log2
+from math import pi, sqrt, gcd, log2
 from sympy import symbols, diff, integrate, mod_inverse
 import os
 import sys
@@ -1163,9 +1163,11 @@ CATEGORY_GENERATORS = {
 def clean_string(text: str) -> str:
     if not isinstance(text, str):
         return text
-    text = re.sub(r'\\n[0-9]+', '\n', text)  # Удаляем \n1, \n2 и т.д.
-    text = text.replace('\\\n', '\n')  # Исправляем экранированные \n
-    text = re.sub(r'\s+', ' ', text).strip()  # Удаляем лишние пробелы
+
+    text = re.sub(r'\\n([0-9]+)', r'\n \1', text)
+    text = re.sub(r'[\x00-\x09\x0B-\x1F\x7F]', ' ', text)
+    text = re.sub(r'\s+', ' ', text).strip()
+
     return text
 
 
