@@ -1,9 +1,11 @@
 import sqlalchemy as sql
 import sqlalchemy.orm as orm
 import passlib.hash as hash
-import database as db
+import sqlalchemy.ext.declarative as declarative
 
-class User(db.Base):
+Base = declarative.declarative_base()
+
+class User(Base):
     __tablename__ = 'users'
     id = sql.Column(sql.Integer, primary_key=True, index=True)
     username = sql.Column(sql.String(50), unique=True, nullable=False)
@@ -19,14 +21,14 @@ class User(db.Base):
     def verify_password(self, password: str):
         return hash.bcrypt.verify(password, self.password_hash)
 
-class Subjects(db.Base):
+class Subjects(Base):
     __tablename__ = 'subjects'
 
-    subject_name = sql.Column(sql.Integer, primary_key=True, index=True)
+    subject_name = sql.Column(sql.String(100), index=True)
     category = sql.Column(sql.String(100), nullable=False)
-    paths = sql.Column(sql.String(100), nullable=False)
+    paths = sql.Column(sql.String(100), primary_key=True, nullable=False)
 
-class GDZ(db.Base):
+class GDZ(Base):
     __tablename__ = 'gdz'
 
     id = sql.Column(sql.Integer, primary_key=True, index=True)
@@ -42,7 +44,7 @@ class GDZ(db.Base):
     user = orm.relationship("User", back_populates="GDZ")
 
 
-class Purchase(db.Base):
+class Purchase(Base):
     __tablename__ = 'purchases'
     id = sql.Column(sql.Integer, primary_key=True, index=True)
     buyer_id = sql.Column(sql.Integer, sql.ForeignKey('users.id'))
@@ -51,7 +53,7 @@ class Purchase(db.Base):
     buyer = orm.relationship("User", back_populates="purchases")
     gdz = orm.relationship("GDZ")
 
-class GDZRating(db.Base):
+class GDZRating(Base):
     __tablename__ = 'gdz_ratings'
     __table_args__ = (
         sql.Index('ix_gdz_rating_gdz_id', 'gdz_id'),
@@ -66,7 +68,7 @@ class GDZRating(db.Base):
     user = orm.relationship("User")
 
 
-class Codes(db.Base):
+class Codes(Base):
     __tablename__ = 'codes'
     id = sql.Column(sql.Integer, primary_key=True, index=True)
     gdz_id = sql.Column(sql.Integer, sql.ForeignKey('gdz.id'))

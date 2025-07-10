@@ -40,7 +40,7 @@ async def add_to_db(db: orm.Session(), class_obj):
 
 
 def get_db():
-    db = _db.Session()
+    db = _db.SessionLocal()
     try:
         yield db
     finally:
