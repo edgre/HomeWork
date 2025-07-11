@@ -18,7 +18,7 @@
 ### Технологический стек
 
 **Frontend**: React + Vite  
-**Backend**: Python + Flask  
+**Backend**: Python + FastAPI  
 **Database**: SQLite
 
 ### Функции

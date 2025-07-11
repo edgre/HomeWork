@@ -19,16 +19,13 @@ from datetime import datetime
 from dynamic_generation import dynamic_generate
 from static_generation import static_generate
 
-
 random = random.SystemRandom()
 
 """ <config> """
-# SERVICE INFO
 PORT = 8000
 HOST = "localhost"
 EXPLOIT_NAME = argv[0]
 
-# DEBUG -- logs to stderr, TRACE -- log HTTP requests
 DEBUG = os.getenv("DEBUG", True)
 TRACE = os.getenv("TRACE", False)
 """ </config> """
@@ -238,6 +235,7 @@ def _purchase_gdz(s, gdz_id):
 
     h = bytes.fromhex(sha1(confirmation_code))
     padding = b"\x00\x01" + b"\xff" * 105 + b"\x00" + h
+    # Преобразуем блок в число
     m = int.from_bytes(padding, "big")
     signature = pow(m, d, n)
 
@@ -468,7 +466,7 @@ def put(host: str, flag_id: str, flag: str, vuln: int):
             gdz = _create_gdz(s, gdz_data, file)
             gdz_id = gdz.get("id")
             if not gdz_id:
-                _die(ExitStatus.CORRUPT, "Failed to get GDZ ID for vuln1")
+                _die(ExitStatus.CORRUPT, "Failed to get GDZ ID for vuln3")
             jd = json.dumps(
                 {
                     "username": user["username"],
@@ -632,6 +630,7 @@ def get(host: str, flag_id: str, flag: str, vuln: int):
 
 def _log(obj):
     if DEBUG and obj:
+        # elapsed_time = time.time() - start_time
         caller = inspect.stack()[1].function
         print(f"[{caller}] {obj}", file=sys.stderr)
     return obj
