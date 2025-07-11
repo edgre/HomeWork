@@ -97,11 +97,8 @@ const HomeworkCreate = () => {
   };
 
   const saveDraftToServer = async () => {
-    console.log("saveDraftToServer вызвана");
-    // Проверяем, есть ли данные для сохранения
     const shouldSave = selectedCategory || selectedSubcategory || shortDescription || fullDescription || price || shortAnswer || isElite;
     if (!shouldSave) {
-      console.log("Нет данных для сохранения черновика");
       return;
     }
 
@@ -127,9 +124,9 @@ const HomeworkCreate = () => {
         method: "POST",
         headers: {
           Authorization: `Bearer ${token}`,
-          "Content-Type": "application/json", // Указываем JSON
+          "Content-Type": "application/json",
         },
-        body: JSON.stringify(draftData), // Отправляем данные как JSON
+        body: JSON.stringify(draftData),
       });
 
       if (!response.ok) {
@@ -140,7 +137,6 @@ const HomeworkCreate = () => {
       }
 
       const responseData = await response.json();
-      console.log("Черновик успешно сохранен:", responseData);
       updateUser({ has_draft: true });
     } catch (err) {
       setError(err.message || "Не удалось сохранить черновик. Пожалуйста, попробуйте снова.");
@@ -198,7 +194,6 @@ const HomeworkCreate = () => {
 
       const responseData = await response.json();
       alert("ГДЗ успешно опубликовано!");
-      console.log("Публикация завершена, сброс формы:", responseData);
 
       setSelectedCategory("");
       setSelectedSubcategory("");

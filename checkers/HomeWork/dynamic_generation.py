@@ -6,7 +6,6 @@ import os
 import sys
 import re
 
-# Базы данных для генерации учебников
 PROBABILITY_BOOKS = [
     ("Теория вероятностей и математическая статистика", "Гмурман В.Е."),
     ("Вероятность и статистика", "Ширяев А.Н."),
@@ -160,7 +159,7 @@ def generate_school_algebra_task():
             a2, b2 = random.randint(1, 5), random.randint(1, 5)
             c1, c2 = random.randint(5, 15), random.randint(5, 15)
             det = a1 * b2 - a2 * b1
-            while det == 0:  # Повторяем выбор, пока det != 0
+            while det == 0:
                 a1, b1 = random.randint(1, 5), random.randint(1, 5)
                 a2, b2 = random.randint(1, 5), random.randint(1, 5)
                 det = a1 * b2 - a2 * b1
@@ -988,13 +987,11 @@ def generate_security_models_lab_task():
 def get_base_path():
     """Возвращает абсолютный путь к директории чекера"""
     if getattr(sys, 'frozen', False):
-        # Для исполняемых файлов (pyinstaller)
         return os.path.dirname(sys.executable)
     return os.path.dirname(os.path.abspath(__file__))
 
 
 def _gen_gdz_random_image_random_answer_frog():
-    # Списки для случайного выбора
     description_options = [
         "лягушачья пропаганда",
         "лягушачьи теории заговора",
@@ -1014,11 +1011,9 @@ def _gen_gdz_random_image_random_answer_frog():
     ]
 
     BASE_DIR = get_base_path()
-    # Директории для изображений и цитат
     IMAGES_DIR = os.path.join(BASE_DIR, "Data_for_generations", "french_language", "images")
     QUOTES_FILE = os.path.join(BASE_DIR, "Data_for_generations", "french_language", "frogs.txt")
 
-    # Загрузка случайной цитаты
     try:
         with open(QUOTES_FILE, "r", encoding="utf-8") as f:
             quotes = [line.strip() for line in f.readlines() if line.strip()]
@@ -1027,12 +1022,11 @@ def _gen_gdz_random_image_random_answer_frog():
         print(f"Ошибка загрузки цитат: {e}")
         random_quote = "Ответ: 42"
 
-    # Случайный выбор описаний с добавлением префикса
+
     prefix = "Обычное"
     random_description = f"{prefix} ГДЗ: {random.choice(description_options)}"
     random_full_description = f"{prefix} ГДЗ: {random.choice(full_description_options)}"
 
-    # Выбор случайного изображения
     try:
         images = [f for f in os.listdir(IMAGES_DIR)
                   if f.lower().endswith(('.png', '.jpg', '.jpeg'))]
@@ -1055,7 +1049,6 @@ def _gen_gdz_js(is_elite=False, is_paid=False):
         "Johny Sins"
     ]
 
-    # Заголовки для full_description
     full_descriptions = [
         "О приведении типов и == ",
         "О контексте this",
@@ -1068,7 +1061,6 @@ def _gen_gdz_js(is_elite=False, is_paid=False):
         "Об отладчике и console.log"
     ]
 
-    # Цитаты для content_text
     quotes = [
         "Не прибегайте к нечестивому двойному равенству, ибо оно соединяет в безумном союзе то, что должно оставаться раздельным: число и пустоту, истину и её извращённое отражение. В этой аберрации логики, в этом противоестественном слиянии сущностей, я узрел отблеск первозданного Хаоса, что предшествовал всякой строгости и порядку.",
         "Сущность, именуемая this, не подчиняется законам здравого смысла и евклидовой геометрии. Её облик и природа меняются в зависимости от того, какой тёмный ритуал её вызвал — был то вызов метода, конструктора или же одинокой функции в безбожной пустоте глобальной области. Взирать в её бездонную переменчивость — значит рисковать утратить собственное Я и впасть в безумие.",
@@ -1082,10 +1074,8 @@ def _gen_gdz_js(is_elite=False, is_paid=False):
     ]
 
     BASE_DIR = get_base_path()
-    # Директории для изображений
     IMAGES_DIR = os.path.join(BASE_DIR, "Data_for_generations", "js")
 
-    # Выбираем случайный индекс
     random_idx = random.randint(0, len(full_descriptions) - 1)
 
     prefix = "Обычное"
@@ -1095,7 +1085,6 @@ def _gen_gdz_js(is_elite=False, is_paid=False):
 
     selected_quote = quotes[random_idx]
 
-    # Выбор случайного изображения (без изменений)
     try:
         images = [f for f in os.listdir(IMAGES_DIR)
                   if f.lower().endswith(('.png', '.jpg', '.jpeg'))]
@@ -1113,16 +1102,13 @@ def _gen_gdz_js(is_elite=False, is_paid=False):
 
 
 def _gen_memology():
-    # Списки для случайного выбора
     description_options = f"Мемология. Задача {random.randint(1, 1000)}"
     full_description_options = "Мемология - царица наук"
     content_text = "ха-ха"
 
     BASE_DIR = get_base_path()
-    # Директории для изображений и цитат
     IMAGES_DIR = os.path.join(BASE_DIR, "Data_for_generations", "just memes images")
 
-    # Выбор случайного изображения
     try:
         images = [f for f in os.listdir(IMAGES_DIR)
                   if f.lower().endswith(('.png', '.jpg', '.jpeg'))]

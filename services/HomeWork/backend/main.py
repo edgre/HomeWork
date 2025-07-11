@@ -48,12 +48,16 @@ app.add_middleware(
 
 
 @app.post("/register")
+<<<<<<< HEAD
 async def register(
     request: Request,
     user: schemas.UserCreate,
     db: orm.Session = Depends(services.get_db),
 ):
     print("Получены данные:", await request.json())
+=======
+async def register(request: Request, user: schemas.UserCreate, db: orm.Session = Depends(services.get_db)):
+>>>>>>> 090bcf9cc2c4398ddef8d40ef67afd210566db29
     user_ex = await services.get_user(db, user.username)
     if user_ex:
         raise HTTPException(status_code=400, detail="username already registered")
@@ -62,7 +66,6 @@ async def register(
         user_db = await services.create_user(db, user)
         return await services.create_access_token(user_db)
     except Exception as e:
-        print("Ошибка при регистрации:", str(e))
         raise HTTPException(status_code=400, detail=str(e))
 
 
@@ -100,11 +103,19 @@ async def get_subjects(db: Session = Depends(get_db)):
 
 
 @app.get("/subjects/{category}", response_model=List[str])
+<<<<<<< HEAD
 async def get_subjects_by_category(category: str, db: Session = Depends(get_db)):
     a = await services.get_subjects_by_category(db, category)
     print(a)
     return a
 
+=======
+async def get_subjects_by_category(
+    category: str,
+    db: Session = Depends(get_db)
+):
+    return await services.get_subjects_by_category(db, category)
+>>>>>>> 090bcf9cc2c4398ddef8d40ef67afd210566db29
 
 @app.post("/gdz/create")
 async def create_gdz_en(

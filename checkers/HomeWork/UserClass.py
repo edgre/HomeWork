@@ -5,9 +5,7 @@ import os
 
 
 def get_base_path():
-    """Возвращает абсолютный путь к директории чекера"""
     if getattr(sys, "frozen", False):
-        # Для исполняемых файлов (pyinstaller)
         return os.path.dirname(sys.executable)
     return os.path.dirname(os.path.abspath(__file__))
 
@@ -87,7 +85,6 @@ class User:
         BASE_DIR = get_base_path()
         DATA_DIR = os.path.join(BASE_DIR, "Data_for_generations")
 
-        # Затем везде, где вы загружаете файлы, используйте:
         male_names_path = os.path.join(DATA_DIR, "male_names_rus.txt")
         male_names = cls.read_words_from_file(
             os.path.join(DATA_DIR, "male_names_rus.txt")
@@ -115,7 +112,7 @@ class User:
         password_chars = string.ascii_letters + string.digits
         password = "".join(
             random.choice(password_chars) for _ in range(12)
-        )  # ƒлина парол¤ 12, как в _gen_user
+        )
 
         return cls(realname, username, password)
 

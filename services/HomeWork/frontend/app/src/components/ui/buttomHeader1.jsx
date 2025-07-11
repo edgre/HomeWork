@@ -8,9 +8,6 @@ const HeaderButtom1 = () => {
   const [modalActive, setModalActive] = useState(false);
   return (
     <header className="headerButtom">
-      {/* <Modal active={modalActive} setActive={setModalActive}>
-        <HomeworkCreate />
-      </Modal> */}
       <div className="header-menu">
         <h3>
           {

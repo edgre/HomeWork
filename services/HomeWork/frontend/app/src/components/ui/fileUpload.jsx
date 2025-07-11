@@ -9,13 +9,12 @@ const FileUploadButton = ({ onFileSelect }) => {
   const handleFileChange = (e) => {
     const file = e.target.files[0];
     processFile(file);
-    e.target.value = ""; // Сброс для повторной загрузки того же файла
+    e.target.value = "";
   };
 
   const processFile = (file) => {
     if (!file) return;
 
-    // Проверка расширения
     const validExtensions = ['.png', '.jpeg', '.jpg'];
     const fileExtension = file.name.split('.').pop().toLowerCase();
 
@@ -24,7 +23,6 @@ const FileUploadButton = ({ onFileSelect }) => {
       return;
     }
 
-    // Проверка размера (5MB)
     const MAX_SIZE = 5 * 1024 * 1024;
     if (file.size > MAX_SIZE) {
       alert("Файл слишком большой (макс. 5MB)");
@@ -32,7 +30,7 @@ const FileUploadButton = ({ onFileSelect }) => {
     }
 
     setFileName(file.name);
-    onFileSelect(file); // Передаём файл родителю
+    onFileSelect(file);
   };
 
   const triggerFileInput = () => {

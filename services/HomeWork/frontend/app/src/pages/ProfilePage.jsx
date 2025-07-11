@@ -11,14 +11,13 @@ const ProfilePage = () => {
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
     const [currentPage, setCurrentPage] = useState(1);
-    const pageSize = 10; // Количество ГДЗ на странице
+    const pageSize = 10;
     const navigate = useNavigate();
 
     useEffect(() => {
         const fetchProfileData = async () => {
             try {
                 const token = localStorage.getItem("access_token");
-                console.log("Токен:", token);
                 if (!token) {
                     throw new Error("Требуется авторизация. Пожалуйста, войдите в систему.");
                 }
@@ -37,15 +36,13 @@ const ProfilePage = () => {
                 }
 
                 const data = await response.json();
-                console.log("Данные профиля:", data);
-                console.log("Количество ГДЗ:", data.gdz_list.length);
                 setProfileData(data);
             } catch (err) {
                 setError(err.message);
                 console.error("Ошибка:", err);
                 if (err.message.includes("Требуется авторизация") || err.message.includes("Неверные учетные данные")) {
                     localStorage.removeItem("access_token");
-                    navigate("/", { replace: true });
+                    navigate("/", {replace: true });
                 }
             } finally {
                 setLoading(false);
@@ -59,12 +56,10 @@ const ProfilePage = () => {
     if (error) return <div className="error">Ошибка: {error}</div>;
     if (!profileData) return <div>Данные профиля не найдены</div>;
 
-    // Пагинация
     const totalPages = Math.ceil(profileData.gdz_list.length / pageSize);
     const startIndex = (currentPage - 1) * pageSize;
     const endIndex = startIndex + pageSize;
     const paginatedGdzList = profileData.gdz_list.slice(startIndex, endIndex);
-    console.log("totalPages:", totalPages, "currentPage:", currentPage, "paginatedGdzList:", paginatedGdzList);
 
     const goToNextPage = () => {
         if (currentPage < totalPages) {

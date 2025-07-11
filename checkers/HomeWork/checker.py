@@ -19,7 +19,7 @@ from datetime import datetime
 from dynamic_generation import dynamic_generate
 from static_generation import static_generate
 
-# Make all random more random.
+
 random = random.SystemRandom()
 
 """ <config> """
@@ -125,7 +125,6 @@ def _gen_gdz(is_elite=False, is_paid=False):
             and category != "Мемология_Царица наук"
             and category != "Мемология_Джаваскриптолюбие"
     ):
-        # print("Using static generation")
         gdz = static_generate(category)
         file_path = gdz["content"]
         gdz_data = {
@@ -138,7 +137,6 @@ def _gen_gdz(is_elite=False, is_paid=False):
         }
         return gdz_data, file_path, category
     else:
-        # print("Using dynamic generation")
         gdz = dynamic_generate(category)
         gdz_data = {
             "description": gdz["description"],
@@ -240,7 +238,6 @@ def _purchase_gdz(s, gdz_id):
 
     h = bytes.fromhex(sha1(confirmation_code))
     padding = b"\x00\x01" + b"\xff" * 105 + b"\x00" + h
-    # Преобразуем блок в число
     m = int.from_bytes(padding, "big")
     signature = pow(m, d, n)
 
@@ -471,7 +468,7 @@ def put(host: str, flag_id: str, flag: str, vuln: int):
             gdz = _create_gdz(s, gdz_data, file)
             gdz_id = gdz.get("id")
             if not gdz_id:
-                _die(ExitStatus.CORRUPT, "Failed to get GDZ ID for vuln3")
+                _die(ExitStatus.CORRUPT, "Failed to get GDZ ID for vuln1")
             jd = json.dumps(
                 {
                     "username": user["username"],
@@ -635,7 +632,6 @@ def get(host: str, flag_id: str, flag: str, vuln: int):
 
 def _log(obj):
     if DEBUG and obj:
-        # elapsed_time = time.time() - start_time
         caller = inspect.stack()[1].function
         print(f"[{caller}] {obj}", file=sys.stderr)
     return obj

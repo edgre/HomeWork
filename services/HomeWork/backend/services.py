@@ -27,7 +27,7 @@ from passlib.context import CryptContext
 app = FastAPI()
 SECRET_KEY = os.environ.get("JWT_SECRET_KEY", os.urandom(32).hex())
 ALGORITHM = "HS256"
-ACCESS_TOKEN_EXPIRE_MINUTES = 30
+
 
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/token")
@@ -62,13 +62,12 @@ async def authenticate_user(db: orm.Session, username: str, password: str):
 
 
 async def verify_password(plain_password: str, hashed_password: str) -> bool:
-    """Проверка пароля с использованием текущего контекста"""
     return pwd_context.verify(plain_password, hashed_password)
 
 
 async def create_access_token(user: models.User, expires_delta: timedelta | None = None):
     user_obj = schemas.UserInDB.from_orm(user)
-    expire = datetime.utcnow() + (expires_delta or timedelta(minutes=15))
+    expire = datetime.utcnow() + (expires_delta or timedelta(minutes=60))
     payload = user_obj.dict()
     payload["exp"] = expire
     token = jwt.encode(payload, SECRET_KEY, algorithm="HS256")
@@ -80,7 +79,6 @@ async def get_current_user(
         token: str = Depends(oauth2_scheme),
 ):
     try:
-        print(token)
         payload = jwt.decode(token, SECRET_KEY, algorithms=["HS256"])
         user = db.query(models.User).get(payload["id"])
     except:
@@ -610,7 +608,6 @@ async def save_draft_to_file(draft_content: Dict[str, Any], file_path: Path) -> 
     for key in ['description', 'full_description', 'content_text']:
         if key in draft_content and draft_content[key] is not None:
             draft_content[key] = draft_content[key].replace('\n', '\\n')
-            # re.sub(r'([:,`\'"])', r'\\\1',  draft_content[key])
 
     template_lines = []
     for key, value in draft_content.items():
@@ -675,7 +672,6 @@ async def read_draft_from_file(file_path: Path) -> dict:
         async with aiofiles.open(file_path, "r", encoding="utf-8") as f:
             content = await f.read()
             data = json.loads(content)
-            print(file_path)
             for key in ['description', 'full_description', 'content_text']:
                 if key in data and data[key] is not None and isinstance(data[key], str):
                     data[key] = data[key].replace('\\n', '\n')

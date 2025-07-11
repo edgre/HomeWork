@@ -12,7 +12,7 @@ const CategoryPage = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState(null);
   const [currentPage, setCurrentPage] = useState(1);
-  const pageSize = 10; // Количество ГДЗ на странице
+  const pageSize = 10;
 
   const parseSlug = (slug) => {
     const [firstPart, ...restParts] = slug.split("_");
@@ -28,7 +28,6 @@ const CategoryPage = () => {
       try {
         setIsLoading(true);
         const token = localStorage.getItem("access_token");
-        console.log("Токен:", token);
         const headers = { Authorization: `Bearer ${token}` };
 
         const response = await fetch(
@@ -49,8 +48,6 @@ const CategoryPage = () => {
         }
 
         const data = await response.json();
-        console.log("Данные задач из API:", data);
-        console.log("Количество задач:", data.length);
         setTasks(data || []);
       } catch (err) {
         setError(err.message);
@@ -63,14 +60,6 @@ const CategoryPage = () => {
   }, [slug, navigate]);
 
   const totalPages = Math.ceil(tasks.length / pageSize);
-  console.log(
-    "tasks.length:",
-    tasks.length,
-    "pageSize:",
-    pageSize,
-    "totalPages:",
-    totalPages
-  );
   const startIndex = (currentPage - 1) * pageSize;
   const endIndex = startIndex + pageSize;
   const paginatedTasks = tasks.slice(startIndex, endIndex);

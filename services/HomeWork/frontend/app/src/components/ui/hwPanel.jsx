@@ -89,7 +89,6 @@ const HomeWorkPanel = ({
     localStorage.setItem("returnPath", currentPath);
 
     if (isOwner || price === 0 || localHasPurchased) {
-      // Используем localHasPurchased
       if (price === 0 && !localHasPurchased && !isOwner) {
         await registerFreePurchase();
         setLocalHasPurchased(true); // Обновляем состояние после успешной покупки

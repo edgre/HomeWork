@@ -10,11 +10,9 @@ const HeaderTop = () => {
     const navigate = useNavigate();
 
     const handleLogout = () => {
-        // Очистка токена и пользователя
         localStorage.removeItem("access_token");
         setUser(null);
 
-        // Переход на главную с заменой истории (чтобы сбросить location.state)
         navigate("/", { replace: true });
     };
 
@@ -33,10 +31,8 @@ const HeaderTop = () => {
                 </Link>
             </div>
             <nav className="header-menu">
-                {/* Отображаем имя пользователя или "Гость" */}
                 <h3>{user?.realname || "Гость"}</h3>
 
-                {/* Кнопка на профиль только если авторизован */}
                 {user && (
                     <Link to="/me">
                         <img
@@ -49,7 +45,6 @@ const HeaderTop = () => {
                     </Link>
                 )}
 
-                {/* Кнопка выхода */}
                 <button className="buttonWhite" onClick={handleLogout}>
                     Выйти
         </button>
