@@ -116,6 +116,7 @@ async def get_subjects_by_category(
 ):
     return await services.get_subjects_by_category(db, category)
 >>>>>>> 090bcf9cc2c4398ddef8d40ef67afd210566db29
+    return await services.get_subjects_by_category(db, category)
 
 @app.post("/gdz/create")
 async def create_gdz_en(
