@@ -18,7 +18,7 @@ const PreviewHomework = ({ gdzId, onClose, flagToNotSetRating = 0, isStandaloneP
         isLoading: true,
         error: null,
         ownerId: null,
-        isFree: false, // Только isFree вместо price
+        isFree: false,
     });
 
     const [isLoading, setIsLoading] = useState(true);
@@ -64,7 +64,7 @@ const PreviewHomework = ({ gdzId, onClose, flagToNotSetRating = 0, isStandaloneP
                     isLoading: false,
                     error: null,
                     ownerId: gdzData.owner_id,
-                    isFree: gdzData.price === 0, // Определяем бесплатность
+                    isFree: gdzData.price === 0,
                 });
             } catch (err) {
                 setData({

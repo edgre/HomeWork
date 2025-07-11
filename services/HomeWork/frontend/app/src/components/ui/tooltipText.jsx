@@ -2,7 +2,6 @@ import React, { useState, useRef, useEffect } from "react";
 import "../../assets/styles/text.css";
 
 const TooltipText = ({ text, maxLength, as: Tag = "span" }) => {
-  // Добавляем параметр `as`
   const [isVisible, setIsVisible] = useState(false);
 
   const truncatedText =
@@ -21,7 +20,7 @@ const TooltipText = ({ text, maxLength, as: Tag = "span" }) => {
   }, [isVisible]);
 
   return (
-    <Tag // Используем переданный тег (по умолчанию 'span')
+    <Tag
       className="truncated-text"
       onMouseEnter={() => setIsVisible(true)}
       onMouseLeave={() => setIsVisible(false)}

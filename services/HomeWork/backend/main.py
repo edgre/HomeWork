@@ -31,7 +31,6 @@ app.add_middleware(
 
 @app.post("/register")
 async def register(request: Request, user: schemas.UserCreate, db: orm.Session = Depends(services.get_db)):
-    print("Получены данные:", await request.json())
     user_ex = await services.get_user(db, user.username)
     if user_ex:
         raise HTTPException(status_code=400, detail="username already registered")
@@ -40,7 +39,6 @@ async def register(request: Request, user: schemas.UserCreate, db: orm.Session =
         user_db = await services.create_user(db, user)
         return await services.create_access_token(user_db)
     except Exception as e:
-        print("Ошибка при регистрации:", str(e))
         raise HTTPException(status_code=400, detail=str(e))
 
 @app.post("/token")
@@ -74,9 +72,7 @@ async def get_subjects_by_category(
     category: str,
     db: Session = Depends(get_db)
 ):
-    a = await services.get_subjects_by_category(db, category)
-    print(a)
-    return (a)
+    return await services.get_subjects_by_category(db, category)
 
 @app.post("/gdz/create")
 async def create_gdz_en(

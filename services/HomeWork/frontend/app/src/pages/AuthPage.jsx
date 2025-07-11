@@ -61,10 +61,9 @@ const AuthPage = () => {
         has_draft: userData.has_draft,
       });
 
-      // Проверяем свежесть состояния и авторизацию
       const isStateValid =
         location.state?.timestamp &&
-        Date.now() - location.state.timestamp < 30000; // 30 секунд
+        Date.now() - location.state.timestamp < 60000;
 
       const from = isStateValid && userData.id ? location.state.from : "/home";
 
@@ -123,7 +122,7 @@ const AuthPage = () => {
       await handleLogin();
     }
   } catch (err) {
-    setError(err.message); // Ловим все ошибки здесь
+    setError(err.message);
   }
 };
 

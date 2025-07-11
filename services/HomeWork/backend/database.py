@@ -2,12 +2,10 @@ from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 from pathlib import Path
 
-# Определяем путь к базе данных
 BASE_DIR = Path(__file__).parent
 DB_PATH = BASE_DIR / "db" / "database.db"
 DATABASE_URL = f"sqlite:///{DB_PATH}"
 
-# Данные для таблицы subjects
 INITIAL_SUBJECTS = [
     {"subject_name": "Мат.анализ", "category": "Университетские задачи", "paths": "Университетские задачи_Мат.анализ"},
     {"subject_name": "Модели безопасности", "category": "Лабораторные работы", "paths": "Лабораторные работы_Модели безопасности"},
@@ -32,8 +30,7 @@ INITIAL_SUBJECTS = [
 
 def add_initial_subjects(db: sessionmaker):
     try:
-        print("Добавляем начальные записи в таблицу subjects...")
-        from models import Subjects  # Импортируем модель Subjects
+        from models import Subjects
         for subject_data in INITIAL_SUBJECTS:
                 subject = Subjects(
                     subject_name=subject_data["subject_name"],
@@ -42,7 +39,6 @@ def add_initial_subjects(db: sessionmaker):
                 )
                 db.add(subject)
         db.commit()
-        print("Начальные записи в таблицу subjects добавлены успешно")
     except Exception as e:
         db.rollback()
         print(f"Ошибка при добавлении начальных записей: {str(e)}")
@@ -51,14 +47,9 @@ def add_initial_subjects(db: sessionmaker):
 def init_db():
     if not DB_PATH.exists():
         DB_PATH.parent.mkdir(parents=True, exist_ok=True)
-        print("Создаём базу данных...")
         try:
-            print("Импортируем модели...")
             from models import User, Subjects, GDZ, Purchase, GDZRating, Codes, Base
-            print("Модели импортированы")
             Base.metadata.create_all(bind=engine)
-            print(f"Создана новая БД с таблицами в {DB_PATH}")
-            # Добавляем начальные записи после создания таблиц
             db = SessionLocal()
             try:
                 add_initial_subjects(db)
@@ -67,8 +58,6 @@ def init_db():
         except Exception as e:
             print(f"Ошибка при создании базы данных или добавлении записей: {str(e)}")
             raise
-    else:
-        print(f"БД уже существует по пути {DB_PATH}")
 
 engine = create_engine(DATABASE_URL, connect_args={"check_same_thread": False})
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)

@@ -10,8 +10,7 @@ import ProfilePage from "./pages/ProfilePage.jsx";
 import NotFoundPage from "./pages/NotFoundPage.jsx";
 import TaskCreatePage from "./pages/TaskCreatePage.jsx";
 import GdzPage from "./pages/GDZPage";
-import ProtectedRoute from "./pages/ProtectedRoute"; // Импортируем новый компонент
-
+import ProtectedRoute from "./pages/ProtectedRoute";
 const router = createBrowserRouter([
   {
     path: "/",

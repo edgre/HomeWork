@@ -11,7 +11,6 @@ const PaymentForm = ({ nonce, gdzId, onClose, onSuccess }) => {
     const [error, setError] = useState(null);
     const [success, setSuccess] = useState(null);
 
-    // Проверка, что введены только цифры
     const validateCardNumber = (value) => {
         const isValid = /^\d*$/.test(value);
         return isValid ? null : "Некорректное значение";
@@ -30,7 +29,6 @@ const PaymentForm = ({ nonce, gdzId, onClose, onSuccess }) => {
         setError(null);
         setSuccess(null);
 
-        // Проверка на стороне клиента
         const validationError = validateCardNumber(cardNumber);
         if (validationError) {
             setError(validationError);
@@ -69,7 +67,6 @@ const PaymentForm = ({ nonce, gdzId, onClose, onSuccess }) => {
             }
 
         } catch (err) {
-            // Специфичная обработка ошибки "Введено неверное значение"
             if (err.message === "Введено неверное значение") {
                 setError("Неверное значение подписи. Пожалуйста, проверьте введённые данные.");
             } else {

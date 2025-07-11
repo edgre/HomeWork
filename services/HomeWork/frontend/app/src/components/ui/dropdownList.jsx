@@ -12,13 +12,11 @@ const DropdownList = ({ onCategoryChange, onSubcategoryChange, initialCategory, 
   const [subcategoriesLoading, setSubcategoriesLoading] = useState(false);
   const [error, setError] = useState(null);
 
-  // Инициализация начальных значений
   useEffect(() => {
     setSelectedCategory(initialCategory || "");
     setSelectedSubcategory(initialSubcategory || "");
   }, [initialCategory, initialSubcategory]);
 
-  // Загрузка категорий при монтировании компонента
   useEffect(() => {
     const fetchCategories = async () => {
       setLoading(true);
@@ -37,14 +35,13 @@ const DropdownList = ({ onCategoryChange, onSubcategoryChange, initialCategory, 
     fetchCategories();
   }, []);
 
-  // Загрузка подкатегорий при изменении selectedCategory
   useEffect(() => {
     const controller = new AbortController();
 
     if (selectedCategory) {
       const fetchSubcategories = async () => {
         setSubcategoriesLoading(true);
-        setSubcategories([]); // Очищаем перед загрузкой новых
+        setSubcategories([]);
 
         try {
           const response = await axios.get(`api/subjects/${selectedCategory}`, {
@@ -89,7 +86,6 @@ const DropdownList = ({ onCategoryChange, onSubcategoryChange, initialCategory, 
     onSubcategoryChange(value);
   };
 
-  // Скелетон для загрузки
   const SkeletonLoader = ({ height = "40px", width = "100%" }) => (
     <div
       className="skeleton-loader"

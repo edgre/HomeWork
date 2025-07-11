@@ -9,9 +9,6 @@ const HeaderButtom2 = () => {
   const [modalActive, setModalActive] = useState(false);
   return (
     <header className="headerButtom">
-      {/* <Modal active={modalActive} setActive={setModalActive}>
-        <HomeworkCreate />
-      </Modal> */}
       <Link to="/home">
         <ButtonWithIcon icon={ArrowLeft} className="buttonGrey">
           Назад
